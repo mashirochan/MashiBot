@@ -252,6 +252,51 @@ exports.commands = {
 		if (!this.hasRank(by, '+%@&#~') || room.charAt(0) === ',') return false;
 		this.say(con, room, '/me pokes kupo on the nose o3o');
 	},
+	tour: 'runtour',
+	runtour: function(arg, by, room, con) {
+		if (!this.canUse('runtour', room, by)) return false;
+		
+		var tourCommand = arg.split(', ');
+		var TourStartTimer = 5 * 60 * 1000;
+		var tourType = tourCommand[0].replace(/\s/g, '');
+		var autoDq = 5 * 60 * 1000;
+		var rounds = 1 * 60 * 1000;
+		var eliminationType = ['elimination', 'roundrobin'];
+		
+		if (tourCommand[1]) {
+			TourStartTimer = tourCommand[1].replace(/\s/g, '') * 60 * 1000;
+		}
+		if (tourCommand[2]) {
+			autoDq = tourCommand[2].replace(/\s/g, '') * 60 * 1000;
+		}
+		if (tourCommand[3]) {
+			rounds = tourCommand[3].replace(/\s/g, '') * 60 * 1000;
+		}
+//		this.say (con, room, typeof TourStartTimer + ', ' + TourStartTimer );
+		
+		if (tourType === '1v1' || tourType === 'cc1v1' || tourType === 'challengecup1v1') {
+			eliminationType[1];
+		} else {
+			eliminationType[0];
+		}
+		
+//		this.say(con, room, tourType + ', ' + eliminationType)
+		if (typeof TourStartTimer!== 'number' || typeof autoDq !== 'number') {
+			this.say(con, room, 'Please provide numbers for the second, third, and fourth arguments.');
+		} else if (!tourCommand[0]) {
+			this.say(con, room, 'Correct syntax: ``&tour <type>[, <signup time>, <autodq timer>, <elimination rounds>]``.');
+		} else {
+			this.say(con, room, '/tour create ' + tourType + ', ' + eliminationType + ', ' + rounds / 60000);
+			this.say(con, room, '/wall The tournament will be starting in **' + TourStartTimer / 60000 +'** minutes.')
+			this.say(con, room, '/wall The auto-disqualification timer will be set to **' + autoDq / 60000 + '** minutes.');
+	
+			setTimeout(function() {
+				this.say(con, room, '/tour start');
+				this.say(con, room, '/wall Please challenge your opponent within **' + autoDq / 60000 + '** minutes.');
+				this.say(con, room, '/tour setautodq ' + autoDq / 60000);
+			}.bind(this), TourStartTimer);
+		}
+	},
 	love: function(arg, by, room, con) {
 		if (!this.hasRank(by, '#~') || room.charAt(0) === ',') return false;
 		this.say(con, room, '/w goddessmashiro, __"I love you^-^<3 ~Bri"__');
