@@ -7,7 +7,7 @@ const ACTION_COOLDOWN = 3*1000;
 const FLOOD_MESSAGE_NUM = 5;
 const FLOOD_PER_MSG_MIN = 500;
 const FLOOD_MESSAGE_TIME = 6*1000;
-const MIN_CAPS_LENGTH = 18;
+const MIN_CAPS_LENGTH = 12;
 const MIN_CAPS_PROPORTION = 0.8;
 
 settings = {};
@@ -16,24 +16,45 @@ try {
 	if (!Object.keys(settings).length && settings !== {}) settings = {};
 } catch (e) {} // file doesn't exist [yet]
 
+friends = {};
+try {
+	friends = JSON.parse(fs.readFileSync('friends.json'));
+	if (!Object.keys(friends).length && friends !== {}) friends = {};
+} catch (e) {} // file doesn't exist [yet]
+
 messages = {};
 try {
 	messages = JSON.parse(fs.readFileSync('messages.json'));
 	if (!Object.keys(messages).length && messages !== {}) messages = {};
 } catch (e) {} // file doesn't exist [yet]
 
-quotes = {};
+notes = {};
 try {
-	quotes = JSON.parse(fs.readFileSync('quotes.json'));
-	if (!Object.keys(quotes).length && quotes !== {}) quotes = {};
+	notes = JSON.parse(fs.readFileSync('notes.json'));
+	if (!Object.keys(notes).length && notes !== {}) notes = {};
+} catch (e) {} // file doesn't exist [yet]
+
+reminders = {};
+try {
+	reminders = JSON.parse(fs.readFileSync('reminders.json'));
+	if (!Object.keys(reminders).length && reminders !== {}) reminders = {};
+} catch (e) {} // file doesn't exist [yet]
+
+scores = {};
+try {
+	scores = JSON.parse(fs.readFileSync('scores.json'));
+	if (!Object.keys(scores).length && scores !== {}) scores = {};
 } catch (e) {} // file doesn't exist [yet]
 
 exports.parse = {
 	actionUrl: url.parse('https://play.pokemonshowdown.com/~~' + config.serverid + '/action.php'),
 	room: 'lobby',
 	'settings': settings,
+	'friends': friends,
 	'messages': messages,
-	'quotes': quotes,
+	'notes': notes,
+	'reminders': reminders,
+	'scores': scores,
 	chatData: {},
 	ranks: {},
 	msgQueue: [],
@@ -54,9 +75,17 @@ exports.parse = {
 		if (!message) return;
 
 		var room = 'lobby';
-		if (message.indexOf('\n') < 0) return this.message(message, connection, room);
+		if (message.indexOf('\n') < 0) return this.message(message, connection, room); // <- this.
 		
 		var spl = message.split('\n');
+		
+			if (spl[2]) {
+			//if (spl[2].substr(1, 5) === 'popup') this.say(connection, 'tha', '__authlist detected!__');
+			if (spl[2].substr(1, 10) === 'tournament') {
+				var splTour = spl[2].split('|');
+				if (/\"results\"/i.test(splTour[3])) this.say(connection, 'tha', 'Good job ' + splTour[3].substr(splTour[3].indexOf("results") + 12, splTour[3].indexOf("format") - splTour[3].indexOf("results") - 17) + ' on winning the tournament!^~^');
+			}
+			}
 		
 		if (spl[0].charAt(0) === '>') {
 			if (spl[1].substr(1, 4) === 'init') return ok('joined ' + spl[2].substr(7));
@@ -71,12 +100,14 @@ exports.parse = {
 	message: function(message, connection, room) {
 		var spl = message.split('|');
 		if (!spl[1]) {
-			if (/was promoted to Room (Driver|Moderator|Owner)/i.test(spl[0])) this.say(connection, room, 'Congratulations on the promotion ' + spl[0].substr(0, spl[0].indexOf("was") - 1) + '! ^-^');
-			if (/was promoted to Room Voice/i.test(spl[0])) this.say(connection, room, 'Welcome to THA, ' + spl[0].substr(0, spl[0].indexOf("was") - 1) + '! :3');
-			if (/was muted by (Flowerbless~|DanceBoTTT|BriyellaBot)/i.test(spl[0])) {
+			if (/was promoted to Room Driver/i.test(spl[0])) this.say(connection, room, 'Congratulations on becoming a Driver ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Moderator/i.test(spl[0])) this.say(connection, room, 'Congratulations on becoming a Moderator ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Owner/i.test(spl[0])) this.say(connection, room, '**(/*-*)/ ALL HAIL ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + ' (/*-*)/**');
+			if (/was promoted to Room Voice/i.test(spl[0])) this.say(connection, room, 'Congrats on becoming Voice ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			/*if (/was muted by (Flowerbless~|DanceBoTTT|BriyellaBot)/i.test(spl[0])) {
 				this.say(connection, room, 'Sorry, bot moderation is being worked on... here ya go! ^-^');
 				this.say(connection, room, '/unmute ' + spl[0].substr(0, spl[0].indexOf("was") - 1));
-			}
+			}*/
 			spl = spl[0].split('>');
 			if (spl[1]) this.room = spl[1];
 			return;
@@ -174,11 +205,13 @@ exports.parse = {
 					var room = toId(config.rooms[i]);
 					if (room === 'lobby' && config.serverid === 'showdown') continue;
 					this.msgQueue.push('|/join ' + room);
+					this.msgQueue.push('|/avatar ' + config.avatarNumber);
 				}
 				for (var i = 0, len = config.privaterooms.length; i < len; i++) {
 					var room = toId(config.privaterooms[i]);
 					if (room === 'lobby' && config.serverid === 'showdown') continue;
 					this.msgQueue.push('|/join ' + room);
+					this.msgQueue.push('|/avatar ' + config.avatarNumber);
 				}
 				this.msgDequeue = setInterval(function () {
 					var msg = this.msgQueue.shift();
@@ -219,26 +252,43 @@ exports.parse = {
 				var by = spl[2];
 				this.updateSeen(by, spl[1], (this.room === '' ? 'lobby' : this.room));
 				if (toId(by) === toId(config.nick) && ' +%@&#~'.indexOf(by.charAt(0)) > -1) this.ranks[room] = by.charAt(0);
-				if (['goddessbriyella', 'themansavage', 'omegaxis14'].indexOf(toId(by)) > -1) {
-					this.say(connection, room, '/w ' + toId(by) + ', **#warn** __is a new command that has been made for Moderators and Room Owners. To use the command, **PM MashiBot** with this syntax:__ #warn **[user]**, **[warn reason]**');
-					this.say(connection, room, '/w ' + toId(by) + ', __This command is not to be abused and is for purely moderation purposes, thanks!^-^ ~Mashiro-chan__');
+			
+// Friends comes online notification
+				for (var i in this.friends) {
+					for (var j in this.friends[i]) {
+						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j] + ' has joined your room!^-^__');
+					}
 				}
-			/*	if (toId(by) == 'goddessbriyella') this.say(connection, room, 'Haaii Briyella!^-^ I missed you ;~;');
-				if (toId(by) == 'themansavage') this.say(connection, room, 'Hey Butch :3');
-				if (toId(by) == 'omegaxis14') this.say(connection, room, '**om**e**g**a o3o hai :3');
-				if (toId(by) == 'starbloom') this.say(connection, room, 'Haaii Kat^-^ How are you? :3');
-				*/
+				
+// Reminders and Messages
+
+				if (this.sendMessages([toId(by)], this.room)) {
+					for (var msgNumber in this.messages[toId(by)]["mail"]) {
+						this.say(connection, this.room, '/w ' + by + ', ' + '[' + msgNumber + ']: ' + this.messages[toId(by)]["mail"][msgNumber]);
+					}
+					delete this.messages[toId(by)];
+					this.writeMessages();
+				}
+				if (this.sendReminders([toId(by)], this.room)) {
+					this.say(connection, this.room, '/w ' + by + ', ' + this.reminders[toId(by)]);
+					delete this.reminders[toId(by)];
+					this.writeReminders();
+				}
 				break;
 			case 'l': case 'L':
 				var by = spl[2];
 				this.updateSeen(by, spl[1], (this.room === '' ? 'lobby' : this.room));
 				this.room = '';
+				
+// Friends goes offline notification
+				for (var i in this.friends) {
+					for (var j in this.friends[i]) {
+						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j] + ' has left your room ;~;__');
+					}
+				}
 				break;
 			case 'raw':
 				if (/[3-9] ?days/i.test(spl[2])) this.say(connection, room, 'zarel pls ;-;');
-				break;
-			case 'tournament':
-				if (/end\|\{"results":\[\[/i.test(spl[2])) this.say(connection, room, 'Good job ' + spl[2].substr(spl[2].indexOf("results") + 12, spl[2].indexOf("\"\],\[")) + ' on winning the tournament!^~^');
 				break;
 		}
 	},
@@ -274,14 +324,7 @@ exports.parse = {
 				error("invalid command type for " + cmd + ": " + (typeof Commands[cmd]));
 			}
 		}
-/*		if (config.allowmute && this.hasRank(this.ranks[room] || ' ', '%@&#~') && config.whitelist.indexOf(user) === -1) {
-			var useDefault = !(this.settings['modding'] && this.settings['modding'][room]);
-		// moderation for abusing bot commands
-		for (cmd in Commands)
-			var isAbusing = (this.chatData.commandFlooding[room][cmd].times.length >= 6 && (time - this.chatData.commandFlooding[room][cmd].times[this.chatData.commandFlooding[room][cmd].times.length - 10]) < 30 * 1000
-				&& (time - this.chatData.commandFlooding[room][cmd].times[this.chatData.commandFlooding[room][cmd].times.length - 6]) > (6 * 30 * 1000));
-			if ((useDefault || this.settings['modding'][room]['flooding'] !== 0) && isAbusing) this.say(connection, room, '/wall Please stop abusing bot commands, they have all been set to # until things settle down again.');
-		} */
+
 	},
 	say: function(connection, room, text) {
 		if (room.charAt(0) !== ',') {
@@ -292,21 +335,6 @@ exports.parse = {
 			var str = '|/pm ' + room + ', ' + text;
 			send(connection, str);
 		}
-	},
-	shorten: function (link) {
-                var BitlyAPI = require("node-bitlyapi");
-                var Bitly = new BitlyAPI({
-                        client_id: "Something",
-                        client_secret: "Something"
-                });
-                var self = this;
-                Bitly.setAccessToken("c8a15558cbf4a555391b974849d7684e211fb707");
-                Bitly.shortenLink(link, function(err, results) {
-                        var resObject = eval("(" + results + ")");
-                        console.log('url: ' + resObject.data.url);
-                        bitLink += resObject.data.url;
-                        console.log('bitLink: ' + bitLink);
-                });
 	},
 	hasRank: function(user, rank) {
 		var hasRank = (rank.split('').indexOf(user.charAt(0)) !== -1) || (config.excepts.indexOf(toId(user)) !== -1);
@@ -324,12 +352,36 @@ exports.parse = {
 		}
 		return canUse;
 	},
-	sendMail: function(user, room) {
-		if (!this.messages || !this.messages[user]) return false;
-		if (this.messages[user]) {
-			console.log(user + ' has mail.');
+	sendMessages: function(user, room) {
+		if (!this.messages) this.messages = {};
+		if (!this.messages[user] || !this.messages[user].mail) return false;
+		if (this.messages[user]["status"] && this.messages[user]["status"] == 'off') return false;
+		if (this.messages[user].mail) {
 			return true;
 		}
+	},
+	sendReminders: function(user, room) {
+		if (!this.reminders || !this.reminders[user]) return false;
+		if (this.reminders[user]) {
+			return true;
+		}
+	},
+	uploadToHastebin: function(con, room, by, toUpload) {
+		var self = this;
+
+		var reqOpts = {
+			hostname: "hastebin.com",
+			method: "POST",
+			path: '/documents'
+		};
+
+		var req = require('http').request(reqOpts, function(res) {
+			res.on('data', function(chunk) {
+				self.say(con, room, (room.charAt(0) === ',' ? "" : "/pm " + by + ", ") + "hastebin.com/raw/" + JSON.parse(chunk.toString())['key']);
+			});
+		});
+		req.write(toUpload);
+		req.end();
 	},
 	processChatData: function(user, room, connection, msg, by) {
 		var botName = msg.toLowerCase().indexOf(toId(config.nick));
@@ -338,9 +390,9 @@ exports.parse = {
 			this.ranks[room] = user.charAt(0);
 			return;
 		}
+	
 		var by = user;
 		user = toId(user);
-		var user = toId(by);
 		
 		if (!user || room.charAt(0) === ',') return;
 		room = toId(room);
@@ -362,56 +414,37 @@ exports.parse = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		//Greetings & Farewells
-		if (/(good)? ?(night|nite) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
-		if (/i(\'?m| am).*go.*to (bed|sleep)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
-		if (/(hey|hi|hello|ha+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Haaii ' + by + '^-^');
-		if (/(bye|g2g|ba+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
-		if (/g2g/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
+//		if (/(good)? ?(night|nite) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
+//		else if (/i(\'?m| am).*go.*to (bed|sleep)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
+//		else if (/(\bhey\b|hi|hello|ha+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Haaii ' + by + '^-^');
+//		else if (/(bye|g2g|ba+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
+//		else if (/g2g/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
 		if (/how(\'re)? (r|are|is) (u|you|chu)? mash(i|y|iro)?bot??/i.test(msg)) this.say(connection, room, 'I am good, how are you ' + by + '? :o');
-		if (/(hi|hey|ha+?i+|hello) mash(i|y|iro)?bot/i.test(msg)) this.say(connection, room, 'Haaii ' + by + '!^-^');
-		
+		else if (/(hi|hey|ha+?i+|hello) mash(i|y|iro)?bot/i.test(msg)) this.say(connection, room, 'Haaii ' + by + '!^-^');
 		
 		//Miscellaneous
-		if (/(why are there )?so many bots( in here)?\??/i.test(msg)) this.say(connection, room, 'Sorry if I\'m intruding, I\'ll try and be as quiet as possible! >~<');
-		if (/(mashiro|mashy|goddess ?mashiro)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
-		if (/(why are there )?so many goddess(es)?( in here)?\??/i.test(msg)) this.say(connection, room, 'Mashiro is just a Briyella wannabe o3o');
-		if (/(9[0-9]|100)% compatible/i.test(msg)) {
-			var rand = ~~(2 * Math.random()) + 1;
-			if (rand == 1) this.say(connection, room, '__it was meant to be :O__');
-			if (rand == 2) this.say(connection, room, '/me plays wedding music');
-		}
-		if (/(1| )[0-9]% compatible/i.test(msg)) this.say(connection, room, '__rip ;-;__');
-		if (/I(\'?m| am) back/i.test(msg)) this.say(connection, room, 'Hi back, I am MashiBot o3o');
-		if (/I(\'?m| am) tired/i.test(msg)) this.say(connection, room, 'Hi tired, I am MashiBot o3o');
-		if (/I(\'?m| am) hungry/i.test(msg)) this.say(connection, room, 'Hi hungry, I am MashiBot o3o');
-		if (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? (goddess)? ?mash(y|iro)/i.test(msg)) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
-		if (/\brip\b/i.test(msg) && toId(by) !== toId('mashibot')) {
-			var rand = ~~(13 * Math.random()) + 1;
-			if (rand == 1) this.say(connection, room, '__rip in pepperoni ;-;__');
-			if (rand == 2) this.say(connection, room, '__rip in pieces ;-;__');
-			if (rand == 3) this.say(connection, room, '__rip in pepsi ;-;__');
-			if (rand == 4) this.say(connection, room, '__rip in PixelMoniac ;-;__');
-			if (rand == 5) this.say(connection, room, '__rip in pizza ;-;__');
-			if (rand == 6) this.say(connection, room, '__rip in pringles ;-;__');
-			if (rand == 7) this.say(connection, room, '__rip in pretzels ;-;__');
-			if (rand == 8) this.say(connection, room, '__rip in pistachios ;-;__');
-			if (rand == 9) this.say(connection, room, '__rip in pasta ;-;__');
-			if (rand == 10) this.say(connection, room, '__rip in peaches ;-;__');
-			if (rand == 11) this.say(connection, room, '__rip in pumpkins ;-;__');
-			if (rand == 12) this.say(connection, room, '__rip in papayas ;-;__');
-			if (rand == 13) this.say(connection, room, '__rip in potatoes ;-;__');
-		}
+		else if (/(why are there )?so many bots( in here)?\??/i.test(msg)) this.say(connection, room, 'Sorry if I\'m intruding, I\'ll try and be as quiet as possible! >~<');
+		else if (/(mashiro|mashy|goddess ?mashiro)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
+		else if (/(why are there )?so many goddess(es)?( in here)?\??/i.test(msg)) this.say(connection, room, 'Mashiro is just a Briyella wannabe o3o');
+//		if (/(9[0-9]|100)% compatible/i.test(msg)) {
+//			var rand = ~~(2 * Math.random()) + 1;
+//			if (rand == 1) this.say(connection, room, '__it was meant to be :O__');
+//			if (rand == 2) this.say(connection, room, '/me plays wedding music');
+//		}
+		else if (/69% compatible/i.test(msg)) this.say(connection, room, '__l-lewd..!! ;~;__');
+		else if (/(1| )[0-9]% compatible/i.test(msg)) this.say(connection, room, '__rip ;-;__');
+//		else if (/I(\'?m| am) back/i.test(msg)) this.say(connection, room, 'Hi back, I am MashiBot o3o');
+//		else if (/I(\'?m| am) tired/i.test(msg)) this.say(connection, room, 'Hi tired, I am MashiBot o3o');
+//		else if (/I(\'?m| am) hungry/i.test(msg)) this.say(connection, room, 'Hi hungry, I am MashiBot o3o');
+		else if (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? (goddess)? ?mash(y|iro)/i.test(msg)) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
+
 //		if (/(rekt|burn)/i.test(msg)) this.say(connection, room, '!data Rawst Berry');
 		
 		//Favorite Pokemon
-		if (/what(\'s| is)? (goddess ?)?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
-		if (/what(\'s| is)? (goddess ?)?bri(yella)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Vespiquen');
-		if (/what(\'s| is)? omega-?(xis14)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Mew');
-		if (/what(\'s| is)? (the|butch) ?mansavage\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg) || /what(\'s| is)? butch\'?s? fav(ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Rhyperior');
+		else if (/what(\'s| is)? (goddess ?)?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
 		
 		//League Names
-		if (/(does)? ?(some|any)(one|1|body) play (league( of legends)?|lol)/i.test(msg)) this.say(connection, room, 'Add Mashiro-chan on League if you want to play: LeInfiniti');
-		if (/what(\'s| is)? jess(ilina| league)?\'?s? (league( of legends)?|lol)( name)?/i.test(msg)) this.say(connection, room, 'Jess\'s League name is: namegohere');
+		if (/(does)? ?(some|any)(one|1|body) (here)? ?play (league( of legends)?|lol)/i.test(msg)) this.say(connection, room, 'Add Mashiro-chan on League if you want to play: LeInfiniti');
 		
 		//osu! room
 		if (/(pronounce|say) osu/i.test(msg)) {
@@ -424,7 +457,32 @@ exports.parse = {
 		}
 		
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////// /me Regex /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////// Reminder Regex ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		
+		
+		if (/mashi(bot)?,? (please)? ?tell/i.test(msg)) {
+			var user = msg.substr(msg.indexOf("tell") + 5, msg.indexOf("that") - 6 - msg.indexOf("tell"));
+			var message = msg.substr(msg.indexOf("that") + 5, msg.length);
+			var msgNew = toProperEnglish(message);
+			if (!this.reminders) this.reminders = {};
+			if (!this.reminders[toId(user)]) this.reminders[toId(user)] = {};
+			this.reminders[toId(user)] = by + ' says \"' + msgNew + '\"';
+			this.writeReminders();
+			this.say(connection, room, '/w ' + toId(by) + ', __Message has been sent successfully to ' + user + '!^-^__');
+		}
+		if (/mashi(bot)?,? (please)? ?remind/i.test(msg)) {
+			var user = msg.substr(msg.indexOf("remind") + 7, msg.indexOf("to") - 8 - msg.indexOf("remind"));
+			var message = msg.substr(msg.indexOf("to") + 3, msg.length);
+			var msgNew = toProperEnglish(message);
+			if (!this.reminders) this.reminders = {};
+			if (!this.reminders[toId(user)]) this.reminders[toId(user)] = {};
+			this.reminders[toId(user)] = by + ' reminds you to \"' + msgNew + '\"';
+			this.writeReminders();
+			this.say(connection, room, '/w ' + toId(by) + ', __Reminder has been sent successfully to ' + user + '!^-^__');
+		}
+		
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////// /me Regex /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		if (botName > -1 && toId(by) !== toId(config.nick)) {
@@ -480,45 +538,71 @@ exports.parse = {
 		}
 		
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////// Moderation Detection //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		
+/// Trivia ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        		
+		
+		if (triviaActive == true) {
+			var self = this;
+			if (toId(msg) == toId(Trivia[questionCounter].answer)) {
+				this.say(connection, room, '**' + by + '** has gotten the answer correct!');
+				questionCounter = Math.round(Math.random() * Object.keys(Trivia).length);
+				if (!participants[toId(by)]) participants[toId(by)] = 1;
+				else participants[toId(by)]++;
+				if (participants[toId(by)] == 3) {
+					var winner = by;
+					setTimeout(function(){self.say(connection, room, 'Congratulations **' + winner + '** on winning this trivia session!^-^');}, 2000);
+					triviaActive = false;
+					participants.length = 0;
+					if (!this.scores[toId(by)]) this.scores[toId(by)] = 1;
+					else this.scores[toId(by)] += 1;
+					this.writeScores();
+				} else setTimeout(function(){self.say(connection, room, '**Next Question:** ' + Trivia[questionCounter].question);}, 5000);
+			}
+		}
 
-/* 			// this deals with punishing rulebreakers, but note that the bot can't think, so it might make mistakes
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Moderation ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        		
+		
+		if (/8=+D/i.test(msg)) this.say(connection, room, '/m ' + toId(by) + ', l-lewd..!! ;///;');
 		if (config.allowmute && this.hasRank(this.ranks[room] || ' ', '%@&#~') && config.whitelist.indexOf(user) === -1) {
 			var useDefault = !(this.settings['modding'] && this.settings['modding'][room]);
 			var pointVal = 0;
-			var muteMessage = '';
 			var warnMessage = '';
-			
+			// moderation for banned words
+			if (useDefault || this.settings['modding'][room]['bannedwords'] !== 0 && pointVal < 2) {
+				var bannedPhrases = !!this.settings.bannedphrases ? (Object.keys(this.settings.bannedphrases[room] || {})).concat(Object.keys(this.settings.bannedphrases['global'] || {})) : [];
+				for (var i = 0; i < bannedPhrases.length; i++) {
+					if (msg.toLowerCase().indexOf(bannedPhrases[i]) > -1) {
+						pointVal = 2;
+						this.say(connection, room, '/mute ' + user + ', please don\'t say that! ;w;');
+						break;
+					}
+				}
+			}
 			// moderation for flooding (more than x lines in y seconds)
-			var isFlooding = (this.chatData[user][room].times.length >= FLOOD_MESSAGE_NUM && (now - this.chatData[user][room].times[this.chatData[user][room].times.length - FLOOD_MESSAGE_NUM]) < FLOOD_MESSAGE_TIME
+/*			var isFlooding = (this.chatData[user][room].times.length >= FLOOD_MESSAGE_NUM && (now - this.chatData[user][room].times[this.chatData[user][room].times.length - FLOOD_MESSAGE_NUM]) < FLOOD_MESSAGE_TIME
 				&& (now - this.chatData[user][room].times[this.chatData[user][room].times.length - FLOOD_MESSAGE_NUM]) > (FLOOD_PER_MSG_MIN * FLOOD_MESSAGE_NUM));
 			if ((useDefault || this.settings['modding'][room]['flooding'] !== 0) && isFlooding) {
-				if (pointVal < 2) {
-					pointVal = 2;
-					warnMessage = ', Please stop flooding the chat! ;~;';
+				if (user === config.nick) {
+					return;
+				} else {
+					this.say(connection, room, '__' + user + ', please don\'t flood the chat ;~;__');
 				}
 			} */
-			
 			// moderation for caps (over x% of the letters in a line of y characters are capital)
-		/*	var capsMatch = msg.replace(/[^A-Za-z]/g, '').match(/[A-Z]/g);
-			if ((useDefault || this.settings['modding'][room]['caps'] !== 0) && capsMatch && toId(msg).length > MIN_CAPS_LENGTH && (capsMatch.length >= Math.floor(toId(msg).length * MIN_CAPS_PROPORTION))) {
-				if (pointVal < 1) {
-					pointVal = 1;
-					muteMessage = ', Don\'t be so loud wtf ;-;';
-				}
-			}
-			// moderation for stretching (over x consecutive characters in the message are the same)
-			var stretchMatch = msg.toLowerCase().match(/(.)\1{7,}/g) || msg.toLowerCase().match(/(..+)\1{4,}/g); // matches the same character (or group of characters) 8 (or 5) or more times in a row
-			if ((useDefault || this.settings['modding'][room]['stretching'] !== 0) && stretchMatch) {
-				if (pointVal < 1) {
-					pointVal = 1;
-					muteMessage = ', This isn\'t yoga, no streching please ._.';
-				}
-			}
+//			var capsMatch = msg.replace(/[^A-Za-z]/g, '').match(/[A-Z]/g);
+//			if ((useDefault || this.settings['modding'][room]['caps'] !== 0) && capsMatch && toId(msg).length > MIN_CAPS_LENGTH && (capsMatch.length >= Math.floor(toId(msg).length * MIN_CAPS_PROPORTION))) {
+//				this.say(connection, room, '__' + user + ', p-please stop yelling..!! >~<__');
+//			}
+//			// moderation for stretching (over x consecutive characters in the message are the same)
+//			var stretchMatch = msg.toLowerCase().match(/(.)\1{7,}/g) || msg.toLowerCase().match(/(..+)\1{4,}/g); // matches the same character (or group of characters) 8 (or 5) or more times in a row
+//			if ((useDefault || this.settings['modding'][room]['stretching'] !== 0) && stretchMatch) {
+//				this.say(connection, room, '__' + by + ', this isn\'t yoga, no stretching please ._.__');
+//			}
 
-			if (pointVal > 0 && !(now - this.chatData[user][room].lastAction < ACTION_COOLDOWN)) {
-				var cmd = 'mute';
+		/*	if (pointVal > 0 && !(now - this.chatData[user][room].lastAction < ACTION_COOLDOWN)) {
+				var cmd = '__';
 				// defaults to the next punishment in config.punishVals instead of repeating the same action (so a second warn-worthy
 				// offence would result in a mute instead of a warn, and the third an hourmute, etc)
 				if (this.chatData[user][room].points >= pointVal && pointVal < 4) {
@@ -528,19 +612,18 @@ exports.parse = {
 					cmd = config.punishvals[pointVal] || cmd;
 					this.chatData[user][room].points = pointVal; // next action will be one level higher than this one (in most cases)
 				}
-				if (config.privaterooms.indexOf(room) >= 0 && cmd === 'warn') cmd = 'mute'; // can't warn in private rooms
+				if (config.privaterooms.indexOf(room) >= 0 && cmd === 'warn') cmd = '__'; // can't warn in private rooms
 				// if the bot has % and not @, it will default to hourmuting as its highest level of punishment instead of roombanning
 				if (this.chatData[user][room].points >= 4 && !this.hasRank(this.ranks[room] || ' ', '@&#~')) cmd = 'hourmute';
 				if (this.chatData[user].zeroTol > 4) { // if zero tolerance users break a rule they get an instant roomban or hourmute
-					muteMessage = ', Automated response: zero tolerance user';
+					warnMessage = ', Automated response: zero tolerance user';
 					cmd = this.hasRank(this.ranks[room] || ' ', '@&#~') ? 'roomban' : 'hourmute';
 				}
 				if (this.chatData[user][room].points >= 2) this.chatData[user].zeroTol++; // getting muted or higher increases your zero tolerance level (warns do not)
 				this.chatData[user][room].lastAction = now;
-				if (this.chatData[user][room].points <= 2) this.say(connection, room, user + ', ' + warnMessage);
-				if (this.chatData[user][room].points >= 3) this.say(connection, room, '/' + cmd + ' ' + user + muteMessage);
+				this.say(connection, room, cmd + user + warnMessage);
 			}
-		 } */
+		*/}
 	},	
 	cleanChatData: function() {
 		
@@ -654,6 +737,127 @@ exports.parse = {
 			});
 		};
 	})(),
+	writeFriends: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeFriends();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+			}
+			writing = true;
+			var data = JSON.stringify(this.friends);
+			fs.writeFile('friends.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('friends.json.0', 'friends.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('friends.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeNotes: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeNotes();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+			}
+			writing = true;
+			var data = JSON.stringify(this.notes);
+			fs.writeFile('notes.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('notes.json.0', 'notes.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('notes.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeScores: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeScores();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+
+			}
+			writing = true;
+			var data = JSON.stringify(this.scores);
+			fs.writeFile('scores.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('scores.json.0', 'scores.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('scores.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeReminders: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeReminders();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+			}
+			writing = true;
+			var data = JSON.stringify(this.reminders);
+			fs.writeFile('reminders.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('reminders.json.0', 'reminders.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('reminders.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
 	writeMessages: (function() {
 		var writing = false;
 		var writePending = false; // whether or not a new write is pending
@@ -678,37 +882,6 @@ exports.parse = {
 					if (err) {
 						// This should only happen on Windows.
 						fs.writeFile('messages.json', data, finishWriting);
-						return;
-					}
-					finishWriting();
-				});
-			});
-		};
-	})(),
-	writeQuotes: (function() {
-		var writing = false;
-		var writePending = false; // whether or not a new write is pending
-		var finishWriting = function() {
-			writing = false;
-			if (writePending) {
-				writePending = false;
-				this.writeQuotes();
-			}
-		};
-		return function() {
-			if (writing) {
-				writePending = true;
-				return;
-
-			}
-			writing = true;
-			var data = JSON.stringify(this.quotes);
-			fs.writeFile('quotes.json.0', data, function() {
-				// rename is atomic on POSIX, but will throw an error on Windows
-				fs.rename('quotes.json.0', 'quotes.json', function(err) {
-					if (err) {
-						// This should only happen on Windows.
-						fs.writeFile('quotes.json', data, finishWriting);
 						return;
 					}
 					finishWriting();
