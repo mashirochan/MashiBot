@@ -53,6 +53,21 @@ global.toId = function(text) {
 	return text.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
+global.toProperEnglish = function(msg) {
+	return msg.replace(/\bhim\b/ig, "you").replace(/\bher\b/ig, "you").replace(/\bshe\'s\b/ig, "you\'re").replace(/\bhe\'s\b/ig, "you\'re").replace(/\bhis\b/ig, "your").replace(/\bhe\b/ig, "you").replace(/\bneeds\b/ig, "need");
+};
+
+global.toAttackSpeed = function(number) {
+	return (0.625 / (1 + number)).toFixed(3);
+};
+
+global.getItemId = function(itemName) {
+	for (var i in leagueItems.items) {
+		if (toId(leagueItems.items[i]["name"]) == itemName) return leagueItems.items[i]["id"];
+	}
+	return false;
+};
+
 global.stripCommands = function(text) {
 	text = text.trim();
 	switch (text.charAt(0)) {
@@ -166,6 +181,15 @@ if (config.watchconfig) {
 }
 
 global.isAfk = false;
+global.hasNum = /\d/g;
+global.questionCounter;
+global.participants = {"johnny":0,"susan":2};
+global.triviaActive = false;
+global.Movedamage = require('./movedamage.js').movedamage;
+global.leagueItems = require('./leagueItems.js').leagueItems;
+global.leagueChamps = require('./leagueChamps.js').leagueChamps;
+global.Trivia = require('./trivia.js').trivia;
+
 
 // And now comes the real stuff...
 info('starting server');
