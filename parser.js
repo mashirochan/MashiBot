@@ -256,12 +256,11 @@ exports.parse = {
 // Friends comes online notification
 				for (var i in this.friends) {
 					for (var j in this.friends[i]) {
-						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j] + ' has joined your room!^-^__');
+						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j].capitalize() + ' has joined your room!^-^__');
 					}
 				}
 				
-// Reminders and Messages
-
+// Messages and Reminders
 				if (this.sendMessages([toId(by)], this.room)) {
 					for (var msgNumber in this.messages[toId(by)]["mail"]) {
 						this.say(connection, this.room, '/w ' + by + ', ' + '[' + msgNumber + ']: ' + this.messages[toId(by)]["mail"][msgNumber]);
@@ -283,7 +282,7 @@ exports.parse = {
 // Friends goes offline notification
 				for (var i in this.friends) {
 					for (var j in this.friends[i]) {
-						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j] + ' has left your room ;~;__');
+						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j].capitalize() + ' has left your room ;~;__');
 					}
 				}
 				break;
@@ -354,9 +353,9 @@ exports.parse = {
 	},
 	sendMessages: function(user, room) {
 		if (!this.messages) this.messages = {};
-		if (!this.messages[user] || !this.messages[user].mail) return false;
+		if (!this.messages[user] || !this.messages[user]["mail"]) return false;
 		if (this.messages[user]["status"] && this.messages[user]["status"] == 'off') return false;
-		if (this.messages[user].mail) {
+		if (this.messages[user]["mail"]) {
 			return true;
 		}
 	},
@@ -479,6 +478,29 @@ exports.parse = {
 			this.reminders[toId(user)] = by + ' reminds you to \"' + msgNew + '\"';
 			this.writeReminders();
 			this.say(connection, room, '/w ' + toId(by) + ', __Reminder has been sent successfully to ' + user + '!^-^__');
+		}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////// YouTube Links /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		if (/youtube\.com/i.test(msg)) {
+			var id = msg.substring(msg.indexOf("=") + 1);
+			var self = this;
+			var options = {
+  				host: 'www.googleapis.com',
+  				path: '/youtube/v3/videos?id=' + id + '&key=AIzaSyBHyOyjHSrOW5wiS5A55Ekx4df_qBp6hkQ&fields=items(snippet(channelId,title,categoryId))&part=snippet'
+			};
+			var callback = function(response) {
+  			var str = '';
+  			response.on('data', function (chunk) {
+    			str += chunk;
+  			});
+  			response.on('end', function () {
+    			self.say(connection, room, '__"' + str.substring(str.indexOf("title") + 9, str.indexOf("categoryId") - 8) + '"__');
+  			});
+			};
+			https.request(options, callback).end();
 		}
 		
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
