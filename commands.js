@@ -3,7 +3,6 @@ var http = require('http');
 var sys = require('sys');
 var osuapi = require('osu-api');
 var osu = new osuapi.Api('d71c2876656c6fcbd2e0456a7410272208360a5d');
-var timezone = require('timezone-api');
 var LolApi = require('leagueapi');
 
 var CDchecker = {
@@ -25,17 +24,17 @@ exports.commands = {
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Help commands /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 
 	git: function(arg, by, room, con) {
 		var text = config.excepts.indexOf(toId(by)) < 0 ? '/pm ' + by + ', ' : '';
-		text += '__MashiBot__ source code: ' + config.fork + '__';
+		text += '__MashiBot__ source code: ' + config.fork;
 		this.say(con, room, text);
 	},
 	guide: 'commands',
+	help: 'commands',
 	commands: function(arg, by, room, con) {
-		if (!this.hasRank(by, ' +%@&#~') || room.charAt(0) === ',') return false;
-		this.say(con, room, 'Commands for MashiBot: http://pastebin.com/QGrSXCQ3');
+		this.say(con, room, 'Commands for MashiBot: ' + config.botguide);
 	},
 	about: function(arg, by, room, con) {
 		if (!this.hasRank(by, ' +%@&#~') || room.charAt(0) === ',') return false;
@@ -463,6 +462,7 @@ exports.commands = {
 		this.writeFriends();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__' + arg + ' has been added to your friends list!^-^__');
 	},
+	friendslist: 'allfriends',
 	allfriends: function(arg, by, room, con) {
 		if (!this.friends[toId(by)]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__You have no friends in your friends list ;~;__');
 		var friendsList = [];
@@ -489,6 +489,8 @@ exports.commands = {
 		this.writeFriends();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__Friends list has been cleared successfully!^-^__');
 	},
+	hidejoins: 'hidefriends',
+	hidenotifications: 'hidefriends',
 	hidefriends: function(arg, by, room, con) {
 		if (!this.friends[toId(by)]) this.friends[toId(by)] = {};
 		if (this.friends[toId(by)]["status"] == 'off') return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__You are already hiding friend notifications!__');
@@ -496,7 +498,10 @@ exports.commands = {
 		this.writeFriends();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__Now hiding all friend notifications!__');
 	},
+	showjoins: 'showfriends',
+	shownotifications: 'showfriends',
 	showfriends: function(arg, by, room, con) {
+		if (!this.friends[toId(by)]) this.friends[toId(by)] = {};
 		if (!this.friends[toId(by)]["status"]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__You are already showing friend notifications!__');
 		delete this.friends[toId(by)]["status"];
 		this.writeFriends();
@@ -564,37 +569,29 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Quote Commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
-/*
+
 	setqotd: 'setquote',
 	setquote: function(arg, by, room, con) {
 		if (!this.hasRank(by, '#~')) return false;
-		delete this.quotes;
-		var user = 'goddessmashiro';
-		var message = arg;
-		if (!this.quotes) this.quotes = {};
-		if (!this.quotes[user]) {
-			this.quotes[user] = {};
-			this.quotes[user].timestamp = Date.now();
+		if (!this.settings) this.settings = {};
+		if (!this.settings["quote"]) this.settings["quote"] = {};
+		var input = arg.split(", ");
+		if (input.length > 2) {
+			this.settings["quote"]["by"] = input[input.length - 1];
+		} else {
+			this.settings["quote"]["quote"] = input[0];
+			this.settings["quote"]["by"] = input[1];
 		}
-		var msgNumber = 0;
-		for (var i in this.quotes[user]) {
-			msgNumber++;
-		}
-		msgNumber = "" + msgNumber;
-		this.quotes[user][msgNumber] = message;
-		this.writeQuotes();
+		this.writeSettings();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Quote has been set!^-^__');
 	},
 	qotd: 'quote',
 	quote: function(arg, by, room, con) {
-		if (!this.quotes['goddessmashiro']) return this.say(con, room, '__No quote has been set ;-;__');
-		for (var quoteNumber in this.quotes['goddessmashiro']) {
-			if (quoteNumber === 'timestamp') continue;
-			this.say(con, room, 'Quote of the Day: __' + this.quotes['goddessmashiro'][quoteNumber] + '__');
-		}
-		this.writeQuotes();
+		if (!this.hasRank(by, '+%@&#~')) return false;
+		if (!this.settings["quote"]) return this.say(con, room, '__No quote has been set ;-;__');
+		this.say(con, room, 'Quote of the Day: __"' + this.settings["quote"]["quote"] + '"__ ~' + this.settings["quote"]["by"]);
 	},
-*/
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Offline PM Commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
@@ -648,7 +645,7 @@ exports.commands = {
 		for (var msgNumber in this.messages[toId(by)]["mail"]) {
 			this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '[' + msgNumber + ']: ' + this.messages[toId(by)]["mail"][msgNumber]);
 		}
-		delete this.messages[toId(by)];
+		delete this.messages[toId(by)]["mail"];
 		this.writeMessages();
 	},
 	/**
@@ -741,6 +738,23 @@ exports.commands = {
 			this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '[' + noteNumber + ']: ' + this.notes[toId(by)][noteNumber]);
 		}
 	},
+	deletenote: 'clearnote',
+	erasenote: 'clearnote',
+	clearnote: function(arg, by, room, con) {
+		if (!this.notes || !this.notes[toId(by)]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__You have no notes, silly :3__');
+		if (!/^\d+$/.test(arg)) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__You must include the note number that you want to erase!__');
+		if (!this.notes[toId(by)][arg]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__That is not a valid note number!__');
+		delete this.notes[toId(by)][arg];
+		this.writeNotes();
+		var place = '';
+		if (arg == '1') place += 'st';
+		else if (arg == '2') place += 'nd';
+		else if (arg == '3') place += 'rd';
+		else place += 'th';
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your ' + arg + place + ' note has been erased!^-^__');
+	},
+	erasenotes: 'clearnotes',
+	erasenotebook: 'clearnotes',
 	clearnotebook: 'clearnotes',
 	clearnotes: function(arg, by, room, con) {
 		if (!this.notes || !this.notes[toId(by)]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__You have no notes, silly :3__');
@@ -752,7 +766,7 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Favorite Pokemon //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
-/*
+
 	setfavemon: function(arg, by, room, con) {
 		var tarRoom = room;
 		if (!this.settings.favemon) this.settings.favemon = {};
@@ -806,11 +820,11 @@ exports.commands = {
 		var poke = this.settings.favemon[user]['favemon'];
 		this.say(con, room, arg + '\'s favorite Pokemon is __' + poke + '__!');
 	},
-*/
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Selfie ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
-/*
+
 	setselfie: function(arg, by, room, con) {
 		var tarRoom = room;
 		var bitLink = '';
@@ -878,15 +892,15 @@ exports.commands = {
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
 		if (!this.settings.selfie[user]) return this.say(con, room, '__No selfie has been set ;-;__');
 		var link = this.settings.selfie[user]['link'];
-		this.say(con, room, arg + '\'s selfie is ' + link + '!');
+		this.say(con, room, arg + '\'s selfie:' + link + '!');
 
 	},
-*/
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// General Commands //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
-/*	pair: function(arg, by, room, con) {
+	pair: function(arg, by, room, con) {
 		if (!(CDchecker.pair !== 1)) return false;
 		if (!this.canUse('pair', room, by)) return false;
 		CDchecker.pair = 1;
@@ -897,7 +911,7 @@ exports.commands = {
 		setTimeout(function() {
 			CDchecker.pair = 0;
 		}, CDtime.pair * 1000);
-	}, */
+	},
 	senpai: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
 		this.say(con, room, 'n-notice me ' + arg + '-senpai... ;~;');
@@ -913,7 +927,7 @@ exports.commands = {
 		this.say(con, room, '/me hugs ' + by + ' gently');
 	},
 	shorten: function(arg, by, room, con) {
-		if (!this.canUse('shorten', room, by) || room.charAt(0) === ',') return false;
+		if (!this.canUse('shorten', room, by)) return false;
 		if (arg.indexOf("http") == -1) return this.say(con, room, 'Please input a __link__!');
 		var BitlyAPI = require("node-bitlyapi");
 		var Bitly = new BitlyAPI({
@@ -926,6 +940,123 @@ exports.commands = {
 			var resObject = eval("(" + results + ")");
 			self.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + resObject.data.url);
 		});
+	},
+	math: function(arg, by, room, con) {
+		var input = arg.replace(/ /g,'');
+		var sign = '';
+		var solution = '';
+		if (input.indexOf('+') > -1) sign = '+';
+		else if (input.indexOf('+') > -1) sign = '+';
+		else if (input.indexOf('-') > -1) sign = '-';
+		else if (input.indexOf('*') > -1) sign = '*';
+		else if (input.indexOf('x') > -1) sign = 'x';
+		else if (input.indexOf('/') > -1) sign = '/';
+		else if (input.indexOf('%') > -1) sign = '%';
+		else if (input.indexOf('^') > -1) sign = '^';
+		else if (input.indexOf('pow') > -1) sign = '^';
+		else if (input.indexOf('power') > -1) sign = '^';
+		else if (input.indexOf('sqrt') > -1) {
+			sign = 'sqrt';
+			var num = input.substring(input.indexOf(sign) + sign.length, input.length);
+			solution = Math.sqrt(parseInt(num, 10)).toFixed(4);
+			return this.say(con, room, 'sqrt(' + num + ') = ' + solution);
+		} else if (input.indexOf('root') > -1) {
+			sign = 'root';
+			var num = input.substring(input.indexOf(sign) + sign.length, input.length);
+			solution = Math.sqrt(parseInt(num, 10)).toFixed(4);
+			return this.say(con, room, 'sqrt(' + num + ') = ' + solution);
+		} else return this.say(con, room, '__Please use a proper sign!__');
+		var num1 = parseInt(input.substring(0, input.indexOf(sign)), 10);
+		var num2 = parseInt(input.substring(input.indexOf(sign) + sign.length, input.length), 10);
+		if (sign == '+') solution = num1 + num2;
+		else if (sign == '-') solution = num1 - num2;
+		else if (sign == '*' || sign == 'x') solution = num1 * num2;
+		else if (sign == '/') solution = num1 / num2;
+		else if (sign == '%') solution = num1 % num2;
+		else if (sign == '^') solution = Math.pow(num1, num2);
+		if (sign == '/' && num2 == 0) return this.say(con, room, 'You cannot divide by zero ;~;');
+		this.say(con, room, num1 + ' ' + sign + ' ' + num2 + ' = ' + solution);
+	},
+	derive: function(arg, by, room, con) {
+		var input = arg.replace(/ /g, '');
+		var terms = input.split(/[+\-]+/);
+		var signs = [];
+		var inputArray = input.split('');
+		for (var i in inputArray) if (inputArray[i] == '+' || inputArray[i] == '-') signs.push(inputArray[i]);
+		for (var i in terms) {
+			if (terms[i].indexOf('xsin(') > -1) {
+				var base = parseInt(terms[i].substring(0, terms[i].indexOf('xsin(')));
+				if (!base) var base = 1;
+				var value = terms[i].substring(terms[i].indexOf('xsin(') + 5, terms[i].indexOf(')'));
+				console.log(base);
+				console.log(value);
+				if (value.indexOf('x^') > -1) {
+					var valueBase = parseInt(value.split('x^')[0]);
+					if (!valueBase) var valueBase = 1;
+					var valuePower = parseInt(value.split('x^')[1]);
+					if (valuePower - 1 == 1) var newPower = '';
+					else var newPower = '^' + valuePower - 1;
+					terms[i] = base + '(xcos(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ') + sin(' + value + '))';
+				} else if (value.indexOf('x') > -1) {
+					
+					terms[i] = base + '(xcos(' + value + ')(' + (valueBase * valuePower) + 'x' + valueBase + ') + sin(' + value + '))';
+				}
+			} else if (terms[i].indexOf('sin(') > -1) {
+				var value = terms[i].substring(4, terms[i].indexOf(')'));
+				if (value.indexOf('x^') > -1) {
+					var valueBase = parseInt(value.split('x^')[0]);
+					if (!valueBase) var valueBase = 1;
+					var valuePower = parseInt(value.split('x^')[1]);
+					terms[i] = 'cos(' + value + ')(' + (valueBase * valuePower) + 'x^' + (valuePower - 1) + ')';
+				} else if (value.indexOf('x') > -1) {
+					var valueBase = parseInt(value.substring(0, value.indexOf('x')));
+					terms[i] = 'cos(' + value + ')(' + valueBase + ')';
+				} else if (value.indexOf('x') == -1) {
+					terms.splice(i, 1);
+					signs.splice(i, 1);
+				}
+			} else if (terms[i].indexOf('cos(') > -1) {
+				var value = terms[i].substring(4, terms[i].indexOf(')'));
+				if (value.indexOf('x^') > -1) {
+					var valueBase = parseInt(value.split('x^')[0]);
+					if (!valueBase) var valueBase = 1;
+					var valuePower = parseInt(value.split('x^')[1]);
+					terms[i] = 'sin(' + value + ')(' + (valueBase * valuePower) + 'x^' + (valuePower - 1) + ')';
+					if (signs[i - 1] == '+') signs[i - 1] = '-';
+					else if (signs[i - 1] == '-') signs[i - 1] = '+';
+				} else if (value.indexOf('x') > -1) {
+					var valueBase = parseInt(value.substring(0, value.indexOf('x')));
+					terms[i] = 'sin(' + value + ')(' + valueBase + ')';
+					if (signs[i - 1] == '+') signs[i - 1] = '-';
+					else if (signs[i - 1] == '-') signs[i - 1] = '+';
+				} else if (value.indexOf('x') == -1) {
+					terms.splice(i, 1);
+					signs.splice(i, 1);
+				}
+			} else if (terms[i].indexOf('x^') > -1) {
+				var base = parseInt(terms[i].substring(0, terms[i].indexOf('x^')), 10);
+				if (!base) var base = 1;
+				var power = parseInt(terms[i].substring(terms[i].indexOf('x^') + 2, terms[i].length), 10);
+				var newBase = base * power;
+				var newPower = power - 1;
+				if (newPower == 1) terms[i] = newBase + 'x';
+				else terms[i] = newBase + 'x^' + newPower;
+			} else if (terms[i].indexOf('x') > -1) {
+				var newTerm = terms[i].substring(0, terms[i].indexOf('x'));
+				if (!newTerm) var newTerm = 1;
+				terms[i] = newTerm;
+			} else if (terms[i].indexOf('x') == -1) {
+				terms.splice(i, 1);
+				signs.splice(i, 1);
+			}
+		}
+		var equation = '';
+		if (terms.length == 0) return this.say(con, room, 'f\'(x) = 0');
+		for (var i in terms) {
+			if (i == terms.length - 1) equation += terms[i];
+			else equation += terms[i] + ' ' + signs[i] + ' ';
+		}
+		this.say(con, room, 'f\'(x) = ' + equation);
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1127,7 +1258,7 @@ exports.commands = {
 			return false;
 		}
 		if (!/https?:\/\//.test(link)) return this.say(con, room, 'Link must include http, __b-baka..!! ;~;__');
-		if (!/myanimelist.net/.test(link)) return this.say(con, room, 'Link must be a MAL link! __b-baka..!! ;~;__')
+		if (!/myanimelist.net/.test(link)) return this.say(con, room, 'Link must be a MAL link! __b-baka..!! ;~;__');
 		if (!this.settings.mal[user]) this.settings.mal[user] = {};
 		this.settings.mal[user]['link'] = link;
 		this.writeSettings();
@@ -1205,9 +1336,6 @@ exports.commands = {
 /// MOBA Room Commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
 	
-	msi: function(arg, by, room, con) {
-		this.say(con, room, 'To watch MSI, go to http://www.twitch.tv/riotgames');	
-	},
 	/**
 	 * ranked is a function that outputs the user's ranked stats
 	 * 
@@ -1232,7 +1360,7 @@ exports.commands = {
 			var season = arg.split(", ")[2];
 		}
 		var self = this;
-		LolApi.init('0e741619-905d-46d5-8565-1bbfc181f7ad', region);
+		LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', region);
 		LolApi.Summoner.getByName(name, region, function(err, summoner) {
 			if (!err) {
 			var id = summoner[name]["id"];
@@ -1291,7 +1419,7 @@ exports.commands = {
 			var season = arg.split(", ")[2];
 		}
 		var self = this;
-		LolApi.init('0e741619-905d-46d5-8565-1bbfc181f7ad', region);
+		LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', region);
 		LolApi.Summoner.getByName(name, region, function(err, summoner) {
 			if (!err) {
 			var id = summoner[name]["id"];
@@ -1323,21 +1451,22 @@ exports.commands = {
     freechamps: function(arg, by, room, con) {
         var names = [];
         var self = this;
-    	LolApi.init('0e741619-905d-46d5-8565-1bbfc181f7ad', 'na');
+    	LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', 'na');
     	LolApi.getChampions(true, function(err, freeChamps) {
     		if (!err) {
     			for (var i in freeChamps) {
-    				if (!freeChamps[i]) return self.say(con, room, '__There has been an error! ;~;__');
-                        var id = freeChamps[i]["id"];
-			LolApi.Static.getChampionById(id, "name", function(err, champ) {
-				if (err) return self.say(con, room, '__There has been an error! ;~;__');
-                                names.push(champ.name);
-                        });
-    		}
-        } else {
-        	return self.say(con, room, '__There has been an error! ;~;__');
-        }});
+                    var id = freeChamps[i]["id"];
+					LolApi.Static.getChampionById(id, "name", function(err, champ) {
+						if (!err) {
+							names.push(champ.name);
+						}
+            		});
+    			}
+        	}
+    	});
+    	if (names.length > 1) {
         setTimeout(function(){self.say(con, room, 'The free champs this week are: __' + names.join(', ') + '.__');},1500);
+    	} else return this.say(con, room, '__There has been an error! ;~;__');
 	},
 	spectate: function(arg, by, room, con) {
 		if (arg.indexOf(", ") == -1) {
@@ -1385,7 +1514,7 @@ exports.commands = {
 			regionId = 'PBE1';
 		}
 		var self = this;
-		LolApi.init('0e741619-905d-46d5-8565-1bbfc181f7ad', region);
+		LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', region);
 		LolApi.Summoner.getByName(name, region, function(err, summoner) {
 				var id = summoner[name]["id"];
 				LolApi.getCurrentGame(id, region, function(err, game) {
@@ -1408,7 +1537,7 @@ exports.commands = {
 		var name = toId(arg.split(", ")[0]);
 		var region = arg.split(", ")[1];
 		var self = this;
-		LolApi.init('0e741619-905d-46d5-8565-1bbfc181f7ad', region);
+		LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', region);
 		LolApi.Summoner.getByName(name, region, function(err, summoner) {
 			try {
 				var id = summoner[name]["id"];
@@ -1459,6 +1588,44 @@ exports.commands = {
 			}
 	});
 	},
+	history: function(arg, by, room, con) {
+		if (!arg || arg.split(", ").length > 3) return this.say(con, room, '__Correct syntax:__ #history ``[summoner name], [champ name]``');
+		var self = this;
+		if (arg.split(", ").length == 2) {
+			var user = arg.split(", ")[0];
+			var region = arg.split(", ")[1];
+			console.log("User: '" + user + "'");
+			console.log("Region: '" + region + "'");
+			LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', region);
+			LolApi.Summoner.getByName(user, region, function(err, summoner) {
+				if (!err) {
+					var id = summoner[user]["id"];
+					console.log("User ID: " + id);
+					LolApi.getMatchHistory(id, region, function(err, match) {
+						var lane = match["matches"][0]["participants"][0]["timeline"]["lane"];
+						var champId = match["matches"][0]["participants"][0]["championId"];
+						var kills = match["matches"][0]["participants"][0]["stats"]["kills"];
+						var deaths = match["matches"][0]["participants"][0]["stats"]["deaths"];
+						var assists = match["matches"][0]["participants"][0]["stats"]["assists"];
+						var winner = '';
+						if (match["matches"][0]["participants"][0]["stats"]["winner"] == 'true') winner = 'Loss';
+						else winner = 'Win';
+						for (var i in leagueChamps["champs"]) {
+							if (leagueChamps["champs"][i]["id"] == champId) var champ = leagueChamps["champs"][i]["name"];
+						}
+						if (lane == 'MIDDLE') lane = 'MID';
+						console.log('ChampID: ' + champId);
+						console.log('Champ: ' + champ);
+						console.log('Lane: ' + toId(lane).capitalize());
+						console.log('KDA: ' + kills + '/' + deaths + '/' + assists);
+						console.log(winner);
+					});
+				} else return self.say(con, room, '__There has been an error getting user id! ;~;__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			
+		} else return this.say(con, room, '__There has been an error! ;~;__');
+	},
 	/**
 	 * champsearch is a function that searches through all champions found in an included js file
 	 * and outputs all champs that meet the criteria that is input by the user
@@ -1499,7 +1666,22 @@ exports.commands = {
 			else if (sign == '>' && leagueChamps.champs[i][parameter] > value) champList.push(' __' + leagueChamps.champs[i]["name"] + '__');
 		}
 		if (champList.length < 1) return this.say(con, room, '__No champs with the criteria could be found. ;-;__');
-		else return this.say(con, room, 'Champs meeting criteria:' + champList);
+		if (champList.length == 1) return this.say(con, room, 'Champ meeting criteria:' + champList);
+		if (champList.length == 2) {
+			var lastChamp = champList[1];
+			var newlastChamp = lastChamp.replace(/_/g, "").replace(/ /g, "");
+			champList.splice(1, 1);
+			champList[0] += ' __and ' + newlastChamp + '__';
+			return this.say(con, room, 'Champs meeting criteria:' + champList);
+		} else {
+			var listLength = champList.length - 1;
+			var lastChamp = champList[listLength];
+			var newlastChamp = lastChamp.replace(/_/g, "");
+			champList.splice(listLength, 1);
+			newlastChamp = ' __and ' + newlastChamp + '__';
+			champList.push(newlastChamp);
+			return this.say(con, room, 'Champs meeting criteria:' + champList);
+		}
 	},
 	/**
 	 * itemsearch is a function that searches through all items found in an included js file
@@ -1740,6 +1922,54 @@ exports.commands = {
 			this.say(con, room, '**New trivia round is now starting**, good luck everyone!^-^');
 			setTimeout(function(){self.say(con, room, '**First Question!** ' + Trivia[questionCounter].question);}, 3000);
 		}
+	},
+	setsong: function(arg, by, room, con) {
+		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
+		if (!this.settings) this.settings = {};
+		if (!this.settings["song"]) this.settings["song"] = {};
+		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setsong ``[name], [link]``');
+		var input = arg.split(", ");
+		this.settings["song"]["name"] = input[0];
+		this.settings["song"]["link"] = input[1];
+		this.writeSettings();
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Song of the Day has been set!^-^__');
+	},
+	sotd: 'song',
+	song: function(arg, by, room, con) {
+		this.say(con, room, 'The Song of the Day is: __' + this.settings["song"]["name"] + '__');
+		this.say(con, room, 'Link: ' + this.settings["song"]["link"]);
+	},
+	setvideo: function(arg, by, room, con) {
+		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
+		if (!this.settings) this.settings = {};
+		if (!this.settings["video"]) this.settings["video"] = {};
+		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setvideo ``[name], [link]``');
+		var input = arg.split(", ");
+		this.settings["video"]["name"] = input[0];
+		this.settings["video"]["link"] = input[1];
+		this.writeSettings();
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Video of the Day has been set!^-^__');
+	},
+	votd: 'video',
+	video: function(arg, by, room, con) {
+		this.say(con, room, 'The Video of the Day is: __' + this.settings["video"]["name"] + '__');
+		this.say(con, room, 'Link: ' + this.settings["video"]["link"]);
+	},
+	setguide: function(arg, by, room, con) {
+		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
+		if (!this.settings) this.settings = {};
+		if (!this.settings["guide"]) this.settings["guide"] = {};
+		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setguide ``[name], [link]``');
+		var input = arg.split(", ");
+		this.settings["guide"]["name"] = input[0];
+		this.settings["guide"]["link"] = input[1];
+		this.writeSettings();
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Guide of the Day has been set!^-^__');
+	},
+	gotd: 'guide',
+	guide: function(arg, by, room, con) {
+		this.say(con, room, 'The Guide of the Day is: __' + this.settings["guide"]["name"] + '__');
+		this.say(con, room, 'Link: ' + this.settings["guide"]["link"]);
 	},
 };
 
