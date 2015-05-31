@@ -1,9 +1,6 @@
 # MashiBot
 A bot for Pokemon Showdown using code from both boTTT and Art2D2, as well as some of my own code. Everything goes to their respective owners^-^
 
-## Index
-
-
 ## Required Dependencies
 ###### These are required in order to use the APIs!
 *Note: If you don't know what these are, then skip this part for now*
@@ -47,8 +44,6 @@ Here are a list of things to look over:
   * Example: ```'https://github.com/mashirochan/MashiBot'```
 * ```exports.avatarNumber``` is the number of the avatar that you want your bot to have
   * Example: ```'155'```
-
-<a href="#makingcommands"></a>
 
 ## Making Commands
 
