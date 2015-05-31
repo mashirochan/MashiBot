@@ -3,6 +3,7 @@ A bot for Pokemon Showdown using code from both boTTT and Art2D2, as well as som
 
 ## Required Dependencies
 ###### These are required in order to use the APIs!
+*Note: If you don't know what these are, then skip this part for now*
 
 League API: ```npm install leagueapi```
 
