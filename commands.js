@@ -1,9 +1,9 @@
-
 var http = require('http');
 var sys = require('sys');
 var osuapi = require('osu-api');
 var osu = new osuapi.Api('d71c2876656c6fcbd2e0456a7410272208360a5d');
 var LolApi = require('leagueapi');
+var request = require('request');
 
 var CDchecker = {
 	roomkick: 0,
@@ -25,20 +25,29 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Help commands /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
-
+	
 	git: function(arg, by, room, con) {
-		var text = config.excepts.indexOf(toId(by)) < 0 ? '/pm ' + by + ', ' : '';
-		text += '__MashiBot__ source code: ' + config.fork;
-		this.say(con, room, text);
+		var text = '';
+		if (!this.hasRank(by, '+%@#~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + '__MashiBot__ source code: ' + config.fork);
+	},
+	shell: 'botshell',
+	botshell: function(arg, by, room, con) {
+		var text = '';
+		if (!this.hasRank(by, '+%@#~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + 'Mashiro-chan\'s Bot Shell Code: ' + config.botshell);
 	},
 	guide: 'commands',
 	help: 'commands',
 	commands: function(arg, by, room, con) {
-		this.say(con, room, 'Commands for MashiBot: ' + config.botguide);
+		var text = '';
+		if (!this.hasRank(by, '+%@#~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + 'Commands for MashiBot: ' + config.botguide);
 	},
 	about: function(arg, by, room, con) {
-		if (!this.hasRank(by, ' +%@&#~') || room.charAt(0) === ',') return false;
-		this.say(con, room, '__MashiBot__ is a bot that was created by Mashiro with the use of code from boTTT and Art2D2. Thanks to their respective owners for the help, I\'m a nub so I couldn\'t have done it without them o3o');
+		var text = '';
+		if (!this.hasRank(by, '@#~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + '__MashiBot__ is a bot that was created by Mashiro with the use of code from boTTT and Art2D2. Thanks to their respective owners for the help, I\'m a nub so I couldn\'t have done it without them o3o');
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,6 +76,17 @@ exports.commands = {
 
 	},
 	/**
+	 * join is a function that makes the bot join the room that the user inputs
+	 * 
+	 * @param user has a rank of Admin (~) or up
+	 * 
+	 * @return {String} - Returns a string that makes the bot join the input room
+	 */
+	join: function(arg, by, room, con) {
+		if (!this.hasRank(by, '~')) return false;
+		this.say(con, room, '/join ' + arg);
+	},
+	/**
 	 * leave is a function that makes the bot leave the room that the user of the command is currently in
 	 * 
 	 * @param user has a rank of Admin (~) or up
@@ -75,7 +95,7 @@ exports.commands = {
 	 */
 	leave: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
-		this.say(con, room, '/leave');
+		this.say(con, arg, '/leave');
 	},
 	/**
 	 * disconnect is a function that makes the bot leave the server entirely
@@ -107,6 +127,7 @@ exports.commands = {
 	 * 
 	 * @return {String} - Sends a message to the specified room
 	 */
+	custom: 'say',
 	say: function(arg, by, room, con) {
 		if (toId(by) !== 'mashirochan') return false;
 		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__No room has been specified!__');
@@ -123,8 +144,10 @@ exports.commands = {
 	 * 
 	 * @return returns the output of the code that is input
 	 */
+	java: 'js',
+	code: 'js',
 	js: function(arg, by, room, con) {
-		if (toId(by) !== 'mashirochan') return false;
+		if (!this.hasRank(by, '#~')) return false;
 		try {
 			var result = eval(arg.trim());
 		}
@@ -140,7 +163,6 @@ exports.commands = {
 	 * @return sets the bot's avatar to the avatar associated with the specified avatar number
 	 */
 	avatar: function(arg, by, room, con) {
-		if (!this.canUse('avatar', room, by)) return false;
 		if (toId(by) !== 'mashirochan') return false;
 		var avatarnumber = Math.round(stripCommands(arg))
 		this.say(con, room, '/avatar ' + avatarnumber);
@@ -159,16 +181,15 @@ exports.commands = {
 /// Moderation commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
-	warn: function(arg, by, room) {
-		if (!this.canUse('warn', room, by)) return false;
+	warn: function(arg, by, room, con) {
+		if (!this.canUse('warn', by)) return false;
 		var warnMsg = arg.split(', ');
-		var tarRoom = 'tha';
-		this.say(con, tarRoom, '__' + warnMsg[0] + ' has been warned by ' + by + '. Reason: ' + warnMsg[1] + '.__');
+		this.say(con, room, '/k ' + warnMsg[0] + ', ' + warnMsg[1] + '.__');
 	},
 	rk: 'roomkick',
 	roomkick: function(arg, by, room, con) {
 		if (!(CDchecker.roomkick !== 1)) return false;
-		if (!this.canUse('roomkick', room, by)) return false;
+		if (!this.canUse('roomkick', by)) return false;
 		CDchecker.roomkick = 1;
 		this.say(room, '/roomban ' + arg + ', you have been bad!!! D:<');
 		this.say(con, room, '/unroomban ' + arg);
@@ -178,32 +199,52 @@ exports.commands = {
 		}, CDtime.roomkick * 1000);
 	},
 	set: function(arg, by, room, con) {
-		if (!this.hasRank(by, '#~') || room.charAt(0) === ',') return false;
+		if (!this.hasRank(by, '#~')) return false;
 
 		var settable = {
-			profile: 1,
-			setprofile: 1,
 			setfavemon: 1,
-			selfie: 1,
+			favemon: 1,
 			setselfie: 1,
-			favemap: 1,
+			selfie: 1,
 			setfavemap: 1,
+			favemap: 1,
 			setquote: 1,
 			quote: 1,
-			favemon: 1,
-			setfriends: 1,
+			setsong: 1,
+			song: 1,
 			moderation: 1,
-			friends: 1,
 			say: 1,
 			warn: 1,
 			senpai: 1,
 			kitty: 1,
 			cri: 1,
 			roomkick: 1,
-			pair: 1,
 			shorten: 1,
 			runtour: 1,
-			love: 1,
+			tourdq: 1,
+			banword: 1,
+			unbanword: 1,
+			viewbannedwords: 1,
+			js: 1,
+			math: 1,
+			derive: 1,
+			moveeffectiveness: 1,
+			ranked: 1,
+			unranked: 1,
+			freechamps: 1,
+			gameinfo: 1,
+			history: 1,
+			champsearch: 1,
+			itemsearch: 1,
+			champion: 1,
+			item: 1,
+			trivia: 1,
+			score: 1,
+			cast: 1,
+			plot: 1,
+			awards: 1,
+			info: 1,
+			writers: 1,
 		};
 		var modOpts = {
 			flooding: 0,
@@ -215,7 +256,7 @@ exports.commands = {
 		var opts = arg.split(',');
 		var cmd = toId(opts[0]);
 		if (cmd === 'mod' || cmd === 'm' || cmd === 'modding') {
-			if (!opts[1] || !toId(opts[1]) || !(toId(opts[1]) in modOpts)) return this.say(con, room, 'Incorrect command: correct syntax is .set mod, [' +
+			if (!opts[1] || !toId(opts[1]) || !(toId(opts[1]) in modOpts)) return this.say(con, room, 'Incorrect command: correct syntax is #set mod, [' +
 				Object.keys(modOpts).join('/') + '](, [on/off])');
 
 			if (!this.settings['modding']) this.settings['modding'] = {};
@@ -225,7 +266,7 @@ exports.commands = {
 				if (!(toId(opts[2]) in {
 						on: 1,
 						off: 1
-					})) return this.say(con, room, 'Incorrect command: correct syntax is .set mod, [' +
+					})) return this.say(con, room, 'Incorrect command: correct syntax is #set mod, [' +
 					Object.keys(modOpts).join('/') + '](, [on/off])');
 				if (toId(opts[2]) === 'off') {
 					this.settings['modding'][room][toId(opts[1])] = 0;
@@ -269,7 +310,6 @@ exports.commands = {
 					return;
 				}
 			}
-
 			var settingsLevels = {
 				off: false,
 				disable: false,
@@ -284,17 +324,18 @@ exports.commands = {
 			};
 			if (!opts[1] || !opts[1].trim()) {
 				var msg = '';
-				if (!this.settings[cmd] || (!this.settings[cmd][room] && this.settings[cmd][room] !== false)) {
-					msg = '#' + cmd + ' is available for nerds of rank ' + ((cmd === 'autoban' || cmd === 'banword') ? '#' : config.defaultrank) + ' and above.';
+				if (!this.settings["set"]) this.settings["set"] = {};
+				if (!this.settings["set"][cmd] && this.settings["set"][cmd] !== false) {
+					msg = '#' + cmd + ' is available for users of rank ' + ((cmd === 'autoban' || cmd === 'banword') ? '#' : config.defaultrank) + ' and above.';
 				}
-				else if (this.settings[cmd][room] in settingsLevels) {
-					msg = '#' + cmd + ' is available for nerds of rank ' + this.settings[cmd][room] + ' and above.';
+				else if (this.settings["set"][cmd] in settingsLevels) {
+					msg = '#' + cmd + ' is available for users of rank ' + this.settings["set"][cmd] + ' and above.';
 				}
-				else if (this.settings[cmd][room] === true) {
-					msg = '#' + cmd + ' is available for all nerds in this room.';
+				else if (this.settings["set"][cmd] === true) {
+					msg = '#' + cmd + ' is available for all users.';
 				}
-				else if (this.settings[cmd][room] === false) {
-					msg = '#' + cmd + ' is not available for use in this room.';
+				else if (this.settings["set"][cmd] === false) {
+					msg = '#' + cmd + ' is not available for use.';
 				}
 				this.say(con, room, msg);
 				return;
@@ -303,28 +344,29 @@ exports.commands = {
 				if (!this.hasRank(by, '#~')) return false;
 				var newRank = opts[1].trim();
 				if (!(newRank in settingsLevels)) return this.say(con, room, 'Unknown option: "' + newRank + '". Valid settings are: off/disable, +, %, @, &, #, ~, on/enable.');
-				if (!this.settings[cmd]) this.settings[cmd] = {};
-				this.settings[cmd][room] = settingsLevels[newRank];
+				if (!this.settings["set"]) this.settings["set"] = {};
+				if (!this.settings["set"][cmd]) this.settings["set"][cmd] = {};
+				this.settings["set"][cmd] = settingsLevels[newRank];
 				this.writeSettings();
 				this.say(con, room, 'The command #' + cmd + ' is now ' +
 					(settingsLevels[newRank] === newRank ? ' available for users of rank ' + newRank + ' and above.' :
-						(this.settings[cmd][room] ? 'available for all users in this room.' : 'unavailable for use in this room.')));
+						(this.settings["set"][cmd] ? 'available for all users.' : 'unavailable for use.')));
 			}
 		}
 	},
 	disablecommands: function(arg, by, room, con) {
-		if (!this.canUse('disablecommands', room, by)) return false;
+		if (!this.canUse('disablecommands', by)) return false;
 		config.defaultrank = '#';
 		this.say(con, room, 'Commands now disabled.');
 	},
 	enablecommands: function(arg, by, room, con) {
-		if (!this.canUse('enablecommands', room, by)) return false;
+		if (!this.canUse('enablecommands', by)) return false;
 		config.defaultrank = '+';
 		this.say(con, room, 'Commands now enabled.');
 	},
 	canmod: 'canmoderate',
 	canmoderate: function(arg, by, room, con) {
-		if (!this.canUse('canmoderate', room, by)) return false;
+		if (!this.canUse('canmoderate', by)) return false;
 		if (config.allowmute == true) {
 			this.say(con, room, config.nick + ' **can** apply moderation to users.');
 		}
@@ -335,7 +377,7 @@ exports.commands = {
 	watch: 'moderation',
 	mod: 'moderation',
 	moderation: function(arg, by, room, con) {
-		if (!this.canUse('moderation', room, by)) return false;
+		if (!this.canUse('moderation', by)) return false;
 		var toggle = toId(stripCommands(arg));
 
 		switch (toggle) {
@@ -574,13 +616,14 @@ exports.commands = {
 	setquote: function(arg, by, room, con) {
 		if (!this.hasRank(by, '#~')) return false;
 		if (!this.settings) this.settings = {};
-		if (!this.settings["quote"]) this.settings["quote"] = {};
-		var input = arg.split(", ");
-		if (input.length > 2) {
-			this.settings["quote"]["by"] = input[input.length - 1];
+		if (!this.settings["qotd"]) this.settings["qotd"] = {};
+		if (arg.split(", ").length > 2) {
+			this.settings["qotd"]["quote"] = arg.substring(0, arg.lastIndexOf(", "));
+			this.settings["qotd"]["by"] = arg.substring(arg.lastIndexOf(", ") + 2, arg.length);
 		} else {
-			this.settings["quote"]["quote"] = input[0];
-			this.settings["quote"]["by"] = input[1];
+			var input = arg.split(", ");
+			this.settings["qotd"]["quote"] = input[0];
+			this.settings["qotd"]["by"] = input[1];
 		}
 		this.writeSettings();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Quote has been set!^-^__');
@@ -588,8 +631,8 @@ exports.commands = {
 	qotd: 'quote',
 	quote: function(arg, by, room, con) {
 		if (!this.hasRank(by, '+%@&#~')) return false;
-		if (!this.settings["quote"]) return this.say(con, room, '__No quote has been set ;-;__');
-		this.say(con, room, 'Quote of the Day: __"' + this.settings["quote"]["quote"] + '"__ ~' + this.settings["quote"]["by"]);
+		if (!this.settings["qotd"]) return this.say(con, room, '__No quote has been set ;-;__');
+		this.say(con, room, 'Quote of the Day: __"' + this.settings["qotd"]["quote"] + '"__ ~' + this.settings["qotd"]["by"]);
 	},
 
 
@@ -768,57 +811,33 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
 	setfavemon: function(arg, by, room, con) {
-		var tarRoom = room;
 		if (!this.settings.favemon) this.settings.favemon = {};
-		if (this.hasRank(by, '#~') && arg.split(", ").length !== 1) {
-			if (!this.settings.favemon[tarRoom]) this.settings.favemon[tarRoom] = {};
-			if (arg.split(", ").length !== 2) return this.say(con, room, 'Syntax is: #setfavemon [user], [pokemon]');
-			var user = toId(arg.split(", ")[0]);
-			var poke = arg.split(", ")[1];
-			if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
-		}
-		else if (this.canUse('setfavemon', room, by)) {
-			var poke = arg;
-			var user = toId(by);
-		}
-		else {
-			return false;
-		}
-		if (!this.settings.favemon[user]) this.settings.favemon[user] = {};
+		if (!this.settings.favemon[toId(by)]) this.settings.favemon[toId(by)] = {};
 		var foundMon = false;
-		var monId = toId(poke.replace(/(shiny|mega)/i, ''));
-		for (mon in Pokedex) {
+		var monId = toId(arg.replace(/(shiny|mega)/i, ''));
+		for (var mon in Pokedex) {
 			if (toId(Pokedex[mon].species) === monId) {
 				foundMon = true;
 				break;
 			}
 		}
-		if (!foundMon) return this.say(con, room, '\'' + poke + '\' is not a valid Pokemon!');
-		this.settings.favemon[user]['favemon'] = poke;
+		if (!foundMon) return this.say(con, room, '\'' + arg + '\' is not a valid Pokemon!');
+		this.settings["favemon"][toId(by)] = arg;
 		this.writeSettings();
-		this.say(con, room, '/w ' + toId(by) + ', __Your favorite pokemon has been set to ' + poke + '!^-^__');
-		var text = '';
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite pokemon has been set to ' + arg + '!^-^__');
 	},
 	favemon: function(arg, by, room, con) {
-		if (this.canUse('favemon', room, by) || room.charAt(0) === ',') {
-			var text = '';
-		}
-		else {
-			var text = '/pm ' + by + ', ';
-		}
+		if (!this.settings["favemon"]) this.settings["favemon"] = {};
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings.favemon[toId(by)]) {
-				return this.say(con, room, by + '\'s favorite Pokemon is __' + this.settings.favemon[toId(by)]['link'] + '__!');
-			}
-			else {
-				return this.say(con, room, 'There is no favorite Pokemon set for ' + by + '.');
-			}
+			if (this.settings["favemon"][toId(by)]) return this.say(con, room, 'There is no favorite Pokemon set for ' + by + '.');
+			return this.say(con, room, by + '\'s favorite Pokemon is __' + this.settings["favemon"][toId(by)] + '__!');
 		}
 		var user = toId(arg);
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
-		if (!this.settings.favemon[user]) return this.say(con, room, '' + text + 'There is no favorite Pokemon set for ' + arg + '.');
-		var poke = this.settings.favemon[user]['favemon'];
-		this.say(con, room, arg + '\'s favorite Pokemon is __' + poke + '__!');
+		if (!this.settings["favemon"][user]) return this.say(con, room, text + 'There is no favorite Pokemon set for ' + arg + '.');
+		this.say(con, room, text + arg + '\'s favorite Pokemon is __' + this.settings["favemon"][user] + '__!');
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -826,31 +845,17 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
 	setselfie: function(arg, by, room, con) {
-		var tarRoom = room;
 		var bitLink = '';
 		var BitlyAPI = require("node-bitlyapi");
 		var Bitly = new BitlyAPI({
 			client_id: "Something",
 			client_secret: "Something"
 		});
-		if (!this.settings.selfie) this.settings.selfie = {};
-		if (this.hasRank(by, '#~') && arg.split(", ").length !== 1) {
-			if (!this.settings.selfie[tarRoom]) this.settings.selfie[tarRoom] = {};
-			if (arg.split(", ").length !== 2) return this.say(con, room, 'Syntax is: #setselfie [user], [link]');
-			var user = toId(arg.split(", ")[0]);
-			var link = arg.split(", ")[1];
-		}
-		else if (this.canUse('setselfie', room, by)) {
-			var link = arg;
-			var user = toId(by);
-		}
-		else {
-			return false;
-		}
-		if (!/https?:\/\//.test(link)) return this.say(con, room, 'Link must include http.');
-		if (!this.settings.selfie[user]) this.settings.selfie[user] = {};
+		if (!this.settings["selfie"]) this.settings["selfie"] = {};
+		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http.');
+		if (!this.settings["selfie"][toId(by)]) this.settings["selfie"][toId(by)] = {};
 		Bitly.setAccessToken("c8a15558cbf4a555391b974849d7684e211fb707");
-		Bitly.shortenLink(link, function(err, results) {
+		Bitly.shortenLink(arg, function(err, results) {
 			var resObject = eval("(" + results + ")");
 			bitLink += resObject.data.url;
 			return bitLink;
@@ -867,32 +872,23 @@ exports.commands = {
 			}
 			else {
 				clearInterval(timer);
-				self.settings.selfie[user]['link'] = bitLink;
+				self.settings["selfie"][toId(by)] = bitLink;
 				self.writeSettings();
 				self.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your selfie has been set!^-^__');
 			}
 		}, 100);
 	},
 	selfie: function(arg, by, room, con) {
-		if (this.canUse('selfie', room, by) || room.charAt(0) === ',') {
-			var text = '';
-		}
-		else {
-			var text = '/pm ' + by + ', ';
-		}
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings.selfie[toId(by)]) {
-				return this.say(con, room, text + by + '\'s selfie is ' + this.settings.selfie[toId(by)]['link'] + '!');
-			}
-			else {
-				return this.say(con, room, '__No selfie has been set ;-;__');
-			}
+			if (!this.settings["selfie"][toId(by)]) return this.say(con, room, '__No selfie has been set ;-;__');
+			return this.say(con, room, text + by + '\'s selfie is ' + this.settings["selfie"][toId(by)] + '!');
 		}
 		var user = toId(arg);
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
-		if (!this.settings.selfie[user]) return this.say(con, room, '__No selfie has been set ;-;__');
-		var link = this.settings.selfie[user]['link'];
-		this.say(con, room, arg + '\'s selfie:' + link + '!');
+		if (!this.settings["selfie"][user]) return this.say(con, room, '__No selfie has been set ;-;__');
+		this.say(con, room, text + arg + '\'s selfie:' + this.settings["selfie"][user] + '!');
 
 	},
 
@@ -900,18 +896,6 @@ exports.commands = {
 /// General Commands //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
-	pair: function(arg, by, room, con) {
-		if (!(CDchecker.pair !== 1)) return false;
-		if (!this.canUse('pair', room, by)) return false;
-		CDchecker.pair = 1;
-		var text = '';
-		var rand = ~~(100 * Math.random() + 1);
-		text += by + ' and ' + arg + ' are ' + rand + '% compatible!';
-		this.say(con, room, text);
-		setTimeout(function() {
-			CDchecker.pair = 0;
-		}, CDtime.pair * 1000);
-	},
 	senpai: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
 		this.say(con, room, 'n-notice me ' + arg + '-senpai... ;~;');
@@ -922,12 +906,11 @@ exports.commands = {
 	},
 	cry: 'cri',
 	cri: function(arg, by, room, con) {
-		if (!this.canUse('cri', room, by) || room.charAt(0) === ',') return false;
+		if (!this.canUse('cri', by) || room.charAt(0) === ',') return false;
 		this.say(con, room, 'Don\'t worry, it will be okay^~^');
 		this.say(con, room, '/me hugs ' + by + ' gently');
 	},
 	shorten: function(arg, by, room, con) {
-		if (!this.canUse('shorten', room, by)) return false;
 		if (arg.indexOf("http") == -1) return this.say(con, room, 'Please input a __link__!');
 		var BitlyAPI = require("node-bitlyapi");
 		var Bitly = new BitlyAPI({
@@ -988,8 +971,6 @@ exports.commands = {
 				var base = parseInt(terms[i].substring(0, terms[i].indexOf('xsin(')));
 				if (!base) var base = 1;
 				var value = terms[i].substring(terms[i].indexOf('xsin(') + 5, terms[i].indexOf(')'));
-				console.log(base);
-				console.log(value);
 				if (value.indexOf('x^') > -1) {
 					var valueBase = parseInt(value.split('x^')[0]);
 					if (!valueBase) var valueBase = 1;
@@ -1007,7 +988,9 @@ exports.commands = {
 					var valueBase = parseInt(value.split('x^')[0]);
 					if (!valueBase) var valueBase = 1;
 					var valuePower = parseInt(value.split('x^')[1]);
-					terms[i] = 'cos(' + value + ')(' + (valueBase * valuePower) + 'x^' + (valuePower - 1) + ')';
+					if (valuePower - 1 == 1) var newPower = '';
+					else var newPower = '^' + valuePower - 1;
+					terms[i] = 'cos(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ')';
 				} else if (value.indexOf('x') > -1) {
 					var valueBase = parseInt(value.substring(0, value.indexOf('x')));
 					terms[i] = 'cos(' + value + ')(' + valueBase + ')';
@@ -1021,7 +1004,9 @@ exports.commands = {
 					var valueBase = parseInt(value.split('x^')[0]);
 					if (!valueBase) var valueBase = 1;
 					var valuePower = parseInt(value.split('x^')[1]);
-					terms[i] = 'sin(' + value + ')(' + (valueBase * valuePower) + 'x^' + (valuePower - 1) + ')';
+					if (valuePower - 1 == 1) var newPower = '';
+					else var newPower = '^' + valuePower - 1;
+					terms[i] = 'sin(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ')';
 					if (signs[i - 1] == '+') signs[i - 1] = '-';
 					else if (signs[i - 1] == '-') signs[i - 1] = '+';
 				} else if (value.indexOf('x') > -1) {
@@ -1116,63 +1101,40 @@ exports.commands = {
 		this.say(con, room, '(/*-*)/ (/*-*)/ ALL HAIL LORD BLOCKO \\(*-*\\) \\(*-*\\)');
 	},
 	users: function(arg, by, room, con) {
-		if (room !== 'osu') return false;
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
 		this.say(con, room, 'osu! room userlist: http://bit.ly/1xuzSBC');
 	},
 	osu: function(arg, by, room, con) {
-		if (room !== 'osu') return false;
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
 		this.say(con, room, 'osu! is a Japanese rhythm game where the player hits notes in time with the beat of the music. There are 5 different game modes, the most popular being standard osu! and osu! mania.');
 	},
 	setfavemap: function(arg, by, room, con) {
-		var tarRoom = room;
-		if (room !== 'osu') return false;
-		if (!this.settings.favemap) this.settings.favemap = {};
-		if (this.hasRank(by, '#~') && arg.split(", ").length !== 1) {
-			if (!this.settings.favemap[tarRoom]) this.settings.favemap[tarRoom] = {};
-			if (arg.split(", ").length !== 2) return this.say(con, room, 'Syntax is: #setfavemap [user], [link]');
-			var user = toId(arg.split(", ")[0]);
-			var link = arg.split(", ")[1];
-		}
-		else if (this.canUse('setfavemap', room, by)) {
-			var link = arg;
-			var user = toId(by);
-		}
-		else {
-			return false;
-		}
-		if (!/https?:\/\//.test(link)) return this.say(con, room, 'Link must include http.');
-		if (!this.settings.favemap[user]) this.settings.favemap[user] = {};
-		this.settings.favemap[user]['link'] = link;
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
+		if (!this.settings["favemap"]) this.settings["favemap"] = {};
+		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http.');
+		if (!this.settings["favemap"][toId(by)]) this.settings["favemap"][toId(by)] = {};
+		this.settings["favemap"][toId(by)] = arg;
 		this.writeSettings();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite beatmap has been set!^-^__');
 	},
 	favemap: function(arg, by, room, con) {
-		if (room !== 'osu') return false;
-		if (this.canUse('favemap', room, by) || room.charAt(0) === ',') {
-			var text = '';
-		}
-		else {
-			var text = '/pm ' + by + ', ';
-		}
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings.favemap[toId(by)]) {
-				return this.say(con, room, text + by + '\'s favorite beatmap is ' + this.settings.favemap[toId(by)]['link'] + '!');
-			}
-			else {
-				return this.say(con, room, '' + text + '__No favorite beatmap has been set ;-;__');
-			}
+			if (!this.settings["favemap"][toId(by)]) return this.say(con, room, '' + text + '__No favorite beatmap has been set ;-;__');
+			return this.say(con, room, text + by + '\'s favorite beatmap is ' + this.settings["favemap"][toId(by)] + '!');
 		}
 		var user = toId(arg);
-		if (!this.settings.favemap[user]) return this.say(con, room, '__No favorite beatmap has been set ;-;__');
-		var link = this.settings.favemap[user]['link'];
-		this.say(con, room, text + arg + '\'s favorite is ' + link + '!');
+		if (!this.settings["favemap"][user]) return this.say(con, room, '__No favorite beatmap has been set ;-;__');
+		this.say(con, room, text + arg + '\'s favorite is ' + this.settings["favemap"][user] + '!');
 	},
 	user: function(arg, by, room, con, callback, error, output) {
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var osuCommand = arg.split(', ');
 		var username = osuCommand[0];
 		var modeType = osuCommand[1];
-		if (room !== 'osu') return false;
-		if (this.canUse('user', room, by)) {
+		if (this.canUse('user', by)) {
 			if (!modeType) {
 				osu.setMode(osuapi.Modes.osu);
 			}
@@ -1202,11 +1164,11 @@ exports.commands = {
 	},
 	map: 'beatmap',
 	beatmap: function(arg, by, room, con, callback, error, output) {
+		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var osuCommand = arg.split(', ');
 		var id = osuCommand[0].substr(21, osuCommand[0].length);
 		var modeType = osuCommand[1];
-		if (room !== 'osu') return false;
-		if (this.canUse('beatmap', room, by)) {
+		if (this.canUse('beatmap', by)) {
 			if (!modeType) {
 				osu.setMode(osuapi.Modes.osu);
 			}
@@ -1241,95 +1203,173 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
 	
 	setmal: function(arg, by, room, con) {
-		var tarRoom = room;
-		if (room !== 'animeandmanga') return false;
-		if (!this.settings.mal) this.settings.mal = {};
-		if (this.hasRank(by, '#~') && arg.split(", ").length !== 1) {
-			if (!this.settings.mal[tarRoom]) this.settings.mal[tarRoom] = {};
-			if (arg.split(", ").length !== 2) return this.say(con, room, 'Syntax is: #setmal [user], [link]');
-			var user = toId(arg.split(", ")[0]);
-			var link = arg.split(", ")[1];
-		}
-		else if (this.canUse('setmal', room, by)) {
-			var link = arg;
-			var user = toId(by);
-		}
-		else {
-			return false;
-		}
-		if (!/https?:\/\//.test(link)) return this.say(con, room, 'Link must include http, __b-baka..!! ;~;__');
-		if (!/myanimelist.net/.test(link)) return this.say(con, room, 'Link must be a MAL link! __b-baka..!! ;~;__');
-		if (!this.settings.mal[user]) this.settings.mal[user] = {};
-		this.settings.mal[user]['link'] = link;
+		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
+		if (!this.settings["mal"]) this.settings["mal"] = {};
+		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http, __b-baka..!! ;~;__');
+		if (!/myanimelist.net/.test(arg)) return this.say(con, room, 'Link must be a MAL link! __b-baka..!! ;~;__');
+		if (!this.settings["mal"][toId(by)]) this.settings["mal"][toId(by)] = {};
+		this.settings["mal"][toId(by)] = arg;
 		this.writeSettings();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your MAL has been set!^-^__');
 	},
 	mal: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return false;
-		if (this.canUse('mal', room, by) || room.charAt(0) === ',') {
-			var text = '';
-		}
-		else {
-			var text = '/pm ' + by + ', ';
-		}
+		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings.mal[toId(by)]) {
-				return this.say(con, room, text + by + '\'s MAL is ' + this.settings.mal[toId(by)]['link'] + '!');
-			}
-			else {
-				return this.say(con, room, '' + text + '__No MAL has been set ;-;__');
-			}
+			if (!this.settings["mal"][toId(by)]) return this.say(con, room, '' + text + '__No MAL has been set ;-;__');
+			return this.say(con, room, text + by + '\'s MAL is ' + this.settings["mal"][toId(by)] + '!');
 		}
 		var user = toId(arg);
-		if (!this.settings.mal[user]) return this.say(con, room, '__No MAL has been set ;-;__');
-		var link = this.settings.mal[user]['link'];
-		this.say(con, room, text + arg + '\'s MAL is ' + link + '!');
+		if (!this.settings["mal"][user]) return this.say(con, room, '__No MAL has been set ;-;__');
+		this.say(con, room, text + arg + '\'s MAL is ' + this.settings["mal"][user] + '!');
 	},
 	setfaveanime: function(arg, by, room, con) {
-		var tarRoom = room;
-		if (room !== 'animeandmanga') return false;
-		if (!this.settings.faveanime) this.settings.faveanime = {};
-		if (this.hasRank(by, '#~') && arg.split(", ").length !== 1) {
-			if (!this.settings.faveanime[tarRoom]) this.settings.faveanime[tarRoom] = {};
-			if (arg.split(", ").length !== 2) return this.say(con, room, 'Syntax is: #setfaveanime [user], [link]');
-			var user = toId(arg.split(", ")[0]);
-			var link = arg.split(", ")[1];
-		}
-		else if (this.canUse('setfaveanime', room, by)) {
-			var link = arg;
-			var user = toId(by);
-		}
-		else {
-			return false;
-		}
-		if (/boku no pico/.test(link)) return this.say(con, room, 'l-lewd..!! ;~;');
-		if (!this.settings.faveanime[user]) this.settings.faveanime[user] = {};
-		this.settings.faveanime[user]['link'] = link;
+		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
+		if (!this.settings["faveanime"]) this.settings["faveanime"] = {};
+		if (/boku no pico/.test(arg)) return this.say(con, room, 'l-lewd..!! ;~;');
+		if (!this.settings["faveanime"][toId(by)]) this.settings["faveanime"][toId(by)] = {};
+		this.settings["faveanime"][toId(by)] = arg;
 		this.writeSettings();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite anime has been set!^-^__');
 	},
 	faveanime: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return false;
-		if (this.canUse('faveanime', room, by) || room.charAt(0) === ',') {
-			var text = '';
-		}
-		else {
-			var text = '/pm ' + by + ', ';
-		}
+		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
+		if (!this.settings["faveanime"]) this.settings["faveanime"] = {};
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings.faveanime[toId(by)]) {
-				if (/http/.test(this.settings.faveanime[toId(by)]['link'])) return this.say(con, room, text + by + '\'s favorite anime is ' + this.settings.faveanime[toId(by)]['link'] + '!');
-				else return this.say(con, room, text + by + '\'s favorite anime is __' + this.settings.faveanime[toId(by)]['link'] + '__!');
-			}
-			else {
-				return this.say(con, room, '' + text + '__No favorite anime has been set ;-;__');
-			}
+			if (!this.settings["faveanime"][toId(by)]) return this.say(con, room, text + '__No favorite anime has been set ;-;__');
+			if (/http/.test(this.settings["faveanime"][toId(by)])) return this.say(con, room, text + by + '\'s favorite anime is ' + this.settings["faveanime"][toId(by)] + '!');
+			else return this.say(con, room, text + by + '\'s favorite anime is __' + this.settings["faveanime"][toId(by)] + '__!');
 		}
 		var user = toId(arg);
-		if (!this.settings.faveanime[user]) return this.say(con, room, '__No favorite anime has been set ;-;__');
-		var link = this.settings.faveanime[user]['link'];
-		if (/http/.test(link)) this.say(con, room, text + by + '\'s favorite anime is ' + link + '!');
-		else this.say(con, room, text + arg + '\'s favorite anime is __' + link + '__!');
+		if (!this.settings["faveanime"][user]) return this.say(con, room, '__No favorite anime has been set ;-;__');
+		if (/http/.test(this.settings["faveanime"][user])) this.say(con, room, text + by + '\'s favorite anime is ' + this.settings["faveanime"][user] + '!');
+		else this.say(con, room, text + arg + '\'s favorite anime is __' + this.settings["faveanime"][user] + '__!');
+	},
+	
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Chess Room Commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
+
+	chessuser: function(arg, by, room, con) {
+		if (room !== 'chess') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var input = arg.replace(/ /g, '');
+		if (arg.split(",").length < 2) return this.say(con, room, text + 'Command syntax: #chessuser ``[username], [game mode]``');
+		var user = input.split(",")[0];
+		var mode = toId(input.split(",")[1]);
+		var modes = 'chess960,blitz,kingofthehill,threecheck,antichess,bullet,correspondence,horde,puzzle,atomic,opening,classical';
+		if (modes.indexOf(mode) < 0) return this.say(con, room, text + '__Not a valid game mode ;-;__');
+		request('http://en.lichess.org/api/user/' + user, function(err, response, body) {
+			var info = JSON.parse(body);
+			console.log(mode);
+			if (info.online === true && info.playing) self.say(con, room, text + '**' + info.username + '** - __Current Game:__ ' + info.playing + ' | __Games:__ ' + info["perfs"][mode]["games"] + ' | __Rating:__ ' + info["perfs"][mode]["rating"] + ' +/- ' + info["perfs"][mode]["rd"]);
+			else self.say(con, room, text + '**' + info.username + '** - __Games:__ ' + info["perfs"][mode]["games"] + ' | __Rating:__ ' + info["perfs"][mode]["rating"] + ' +/- ' + info["perfs"][mode]["rd"]);
+		});
+	},
+	
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// TV & Books & Films Room Commands //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
+	
+	score: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	awards: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	actors: 'cast',
+	cast: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	summary: 'plot',
+	plot: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	info: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	writers: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		var self = this;
+		var title = arg.replace(/ /g,'+');
+		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
+			else self.say(con, room, text + '__Incorrect movie title!__');
+		});
+	},
+	recs: 'staffrecommendations',
+	reclist: 'staffrecommendations',
+	staffrecs: 'staffrecommendations',
+	staffrecommendations: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		if (!arg) return this.say(con, room, text + 'Staff Recommendations: https://docs.google.com/document/d/1_Lhwcp-c_TAKXdgRw0-vXpdicGF4o1PMpY8J0sO3Nvo/edit');
+		if (toId(arg) === 'saburo') return this.say(con, room, text + 'Saburo\'s Recommendations: https://docs.google.com/spreadsheets/d/1Q46JUogMuN2Kv82SorxhLX7P6mN2f3LwKQ478vIACPs/edit#gid=0');
+		if (toId(arg) === 'ace') return this.say(con, room, text + 'Ace\'s Recommendations: https://docs.google.com/spreadsheets/d/1dwDT91WIINhpE_g82i6TvplEWE6vq1B2N9VONCcRe-w/edit#gid=0');
+		if (toId(arg) === 'angeela') return this.say(con, room, text + 'Angeela\'s Recommendations: https://docs.google.com/spreadsheets/d/1VcXKatIzGI5yxrogrPEGWBWAYJvYlSgnQkURAe2WLUs/edit#gid=0');
+		if (toId(arg) === 'valentina16') return this.say(con, room, text + 'Valentina\'s Recommendations: https://docs.google.com/spreadsheets/d/1-NQE8-AZSF7uI2Ec9_rsExLh_VUOQWx7kirIWooIpLQ/edit#gid=0');
+		if (toId(arg) === 'hallowedthoughts') return this.say(con, room, text + 'Hallowed Thoughts\'s Recommendations: https://docs.google.com/spreadsheets/d/14_eXf31Ei3r6tppq0ekdZvondZ_92bOx_0LyXViw_eU/edit#gid=0');
+		if (toId(arg) === 'himynamesl') return this.say(con, room, text + 'HiMyNamesL\'s Recommendations: https://docs.google.com/spreadsheets/d/1NVtyWvYUVKpXohd2YbVcC5u0gDizbyAtRl-c1e2dOnc/edit#gid=0');
+	},
+	prenoms: function(arg, by, room, con) {
+		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + 'Pre-nominations: https://docs.google.com/spreadsheets/d/18wrB42cHhBcqqse-WxOTEOUYK3YkA90IPuCXttMIiiw/edit#gid=0');
 	},
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1345,6 +1385,7 @@ exports.commands = {
 	 * @return {String}       - Returns wins and loses of a user in ranked games
 	 */
 	ranked: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
 		if (arg.indexOf(", ") == -1) {
 			var name = toId(arg);
@@ -1404,6 +1445,7 @@ exports.commands = {
 	 * @return {String}       - Returns many stats of a user for all of the unranked games
 	 */
 	unranked: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
 		if (arg.indexOf(", ") == -1) {
 			var name = toId(arg);
@@ -1449,6 +1491,8 @@ exports.commands = {
 	 */
 	freeweek: 'freechamps',
     freechamps: function(arg, by, room, con) {
+    	if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
+    	if (!this.canUse('freechamps', by)) return false;
         var names = [];
         var self = this;
     	LolApi.init('9596c295-4c9d-4895-b4b7-119e9848781c', 'na');
@@ -1464,11 +1508,13 @@ exports.commands = {
     			}
         	}
     	});
-    	if (names.length > 1) {
-        setTimeout(function(){self.say(con, room, 'The free champs this week are: __' + names.join(', ') + '.__');},1500);
-    	} else return this.say(con, room, '__There has been an error! ;~;__');
+    	setTimeout(function(){
+    		if (names.length > 1) self.say(con, room, 'The free champs this week are: __' + names.join(', ') + '.__');
+    		else return this.say(con, room, '__There has been an error! ;~;__');
+    	},1500);
 	},
 	spectate: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (arg.indexOf(", ") == -1) {
 			if (toId(arg) == 'help') return this.say(con, room, 'Command Syntax: #spectate: ``[username], [region]``. Paste the output into cmd in windows to start the spectator.');
 			var name = toId(arg);
@@ -1534,6 +1580,7 @@ exports.commands = {
 	 * @return {String}       - Returns picks and bans of the game that the user is in
 	 */
 	gameinfo: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var name = toId(arg.split(", ")[0]);
 		var region = arg.split(", ")[1];
 		var self = this;
@@ -1589,6 +1636,7 @@ exports.commands = {
 	});
 	},
 	history: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!arg || arg.split(", ").length > 3) return this.say(con, room, '__Correct syntax:__ #history ``[summoner name], [champ name]``');
 		var self = this;
 		if (arg.split(", ").length == 2) {
@@ -1638,6 +1686,7 @@ exports.commands = {
 	 */
 	cs: 'champsearch',
 	champsearch: function (arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!arg || arg.indexOf(" ") == -1 || arg.split(" ").length < 3) return this.say(con, room, '__Correct syntax:__ #champsearch ``[parameter] [sign] [value]``');
 		var target = arg.split(" ");
 		var parameter = target[0];
@@ -1695,6 +1744,7 @@ exports.commands = {
 	 */
 	is: 'itemsearch',
 	itemsearch: function (arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!arg || arg.indexOf(" ") == -1 || arg.split(" ").length < 3) return this.say(con, room, '__Correct syntax:__ #itemsearch ``[parameter] [sign] [value]``');
 		var target = arg.split(" ");
 		var parameter = target[0];
@@ -1760,6 +1810,7 @@ exports.commands = {
 	hero: 'champion',
 	god: 'champion',
 	champion: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
 		var input = arg.split(" ");
 		var champName = toId(input[1]).capitalize();
@@ -1785,6 +1836,12 @@ exports.commands = {
 			this.say(con, room, '__This command will be comming soon, sorry! ;~;__');
 		} else return this.say(con, room, 'Command syntax: #champion ``[info]|[stats]|[abilities] [champ name]``');
 	},
+	randomchamp: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
+		var rand = Math.round(Math.random() * 124);
+		var champArray = Object.keys(leagueChamps.champs).map(function (key) {return leagueChamps.champs[key]});
+		this.say(con, room, 'Your random champ is: __' + champArray[rand]["name"] + '__');
+	},
 	/**
 	 * item is a function that outputs data for a specific item in League of Legends
 	 * 
@@ -1793,6 +1850,7 @@ exports.commands = {
 	 * @return {String}     - Returns basic data about the specified item
 	 */
 	item: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
 		var input = arg.split(" ");
 		if (input.length > 2) {
@@ -1905,6 +1963,7 @@ exports.commands = {
 	 * @return {boolean}   - Returns true if no arg
 	 */
 	trivia: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (toId(arg) == 'off' || toId(arg) == 'end') {
 			if (!this.hasRank(by, '@&#~')) return false;
 			this.say(con, room, '__Trivia session has been aborted!__');
@@ -1924,6 +1983,7 @@ exports.commands = {
 		}
 	},
 	setsong: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
 		if (!this.settings) this.settings = {};
 		if (!this.settings["song"]) this.settings["song"] = {};
@@ -1940,6 +2000,7 @@ exports.commands = {
 		this.say(con, room, 'Link: ' + this.settings["song"]["link"]);
 	},
 	setvideo: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
 		if (!this.settings) this.settings = {};
 		if (!this.settings["video"]) this.settings["video"] = {};
@@ -1952,10 +2013,12 @@ exports.commands = {
 	},
 	votd: 'video',
 	video: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		this.say(con, room, 'The Video of the Day is: __' + this.settings["video"]["name"] + '__');
 		this.say(con, room, 'Link: ' + this.settings["video"]["link"]);
 	},
 	setguide: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
 		if (!this.settings) this.settings = {};
 		if (!this.settings["guide"]) this.settings["guide"] = {};
@@ -1968,6 +2031,7 @@ exports.commands = {
 	},
 	gotd: 'guide',
 	guide: function(arg, by, room, con) {
+		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		this.say(con, room, 'The Guide of the Day is: __' + this.settings["guide"]["name"] + '__');
 		this.say(con, room, 'Link: ' + this.settings["guide"]["link"]);
 	},
