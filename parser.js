@@ -100,14 +100,10 @@ exports.parse = {
 	message: function(message, connection, room) {
 		var spl = message.split('|');
 		if (!spl[1]) {
-			if (/was promoted to Room Driver/i.test(spl[0])) this.say(connection, room, 'Congratulations on becoming a Driver ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
-			if (/was promoted to Room Moderator/i.test(spl[0])) this.say(connection, room, 'Congratulations on becoming a Moderator ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
-			if (/was promoted to Room Owner/i.test(spl[0])) this.say(connection, room, '**(/*-*)/ ALL HAIL ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + ' (/*-*)/**');
-			if (/was promoted to Room Voice/i.test(spl[0])) this.say(connection, room, 'Congrats on becoming Voice ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
-			/*if (/was muted by (Flowerbless~|DanceBoTTT|BriyellaBot)/i.test(spl[0])) {
-				this.say(connection, room, 'Sorry, bot moderation is being worked on... here ya go! ^-^');
-				this.say(connection, room, '/unmute ' + spl[0].substr(0, spl[0].indexOf("was") - 1));
-			}*/
+			if (/was promoted to Room Driver/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congratulations on becoming a Driver ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Moderator/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congratulations on becoming a Moderator ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Owner/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, '**(/*-*)/ ALL HAIL ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + ' (/*-*)/**');
+			if (/was promoted to Room Voice/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congrats on becoming Voice ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
 			spl = spl[0].split('>');
 			if (spl[1]) this.room = spl[1];
 			return;
@@ -296,7 +292,7 @@ exports.parse = {
 		var cmdrMessage = '["' + room + '|' + by + '|' + message + '"]';
 		message = message.trim();
 		// auto accept invitations to rooms
-		if (room.charAt(0) === ',' && message.substr(0,8) === '/invite ' && this.hasRank(by, '%@&~') && !(config.serverid === 'showdown' && toId(message.substr(8)) === 'lobby')) {
+		if (room.charAt(0) === ',' && message.substr(0,8) === '/invite ' && this.hasRank(by, '#&~') && !(config.serverid === 'showdown' && toId(message.substr(8)) === 'lobby')) {
 			this.say(connection, '', '/join ' + message.substr(8));
 		}
 		if (message.substr(0, config.commandcharacter.length) !== config.commandcharacter || toId(by) === toId(config.nick)) return;
@@ -339,15 +335,15 @@ exports.parse = {
 		var hasRank = (rank.split('').indexOf(user.charAt(0)) !== -1) || (config.excepts.indexOf(toId(user)) !== -1);
 		return hasRank;
 	},
-	canUse: function(cmd, room, user) {
+	canUse: function(cmd, user) {
 		var canUse = false;
 		var ranks = ' +%@&#~';
-		if (!this.settings[cmd] || !this.settings[cmd][room]) {
+		if (!this.settings[cmd]) {
 			canUse = this.hasRank(user, ranks.substr(ranks.indexOf((cmd === 'autoban' || cmd === 'banword') ? '#' : config.defaultrank)));
-		} else if (this.settings[cmd][room] === true) {
+		} else if (this.settings[cmd] === true) {
 			canUse = true;
-		} else if (ranks.indexOf(this.settings[cmd][room]) > -1) {
-			canUse = this.hasRank(user, ranks.substr(ranks.indexOf(this.settings[cmd][room])));
+		} else if (ranks.indexOf(this.settings[cmd]) > -1) {
+			canUse = this.hasRank(user, ranks.substr(ranks.indexOf(this.settings[cmd])));
 		}
 		return canUse;
 	},
@@ -382,16 +378,18 @@ exports.parse = {
 		req.write(toUpload);
 		req.end();
 	},
-	processChatData: function(user, room, connection, msg, by) {
+	processChatData: function(user, room, connection, msg) {
 		var botName = msg.toLowerCase().indexOf(toId(config.nick));
 		
 		if (toId(user.substr(1)) === toId(config.nick)) {
 			this.ranks[room] = user.charAt(0);
 			return;
 		}
-	
+		
 		var by = user;
+//		console.log(by);
 		user = toId(user);
+//		console.log(user);
 		
 		if (!user || room.charAt(0) === ',') return;
 		room = toId(room);
@@ -423,27 +421,19 @@ exports.parse = {
 		
 		//Miscellaneous
 		else if (/(why are there )?so many bots( in here)?\??/i.test(msg)) this.say(connection, room, 'Sorry if I\'m intruding, I\'ll try and be as quiet as possible! >~<');
-		else if (/(mashiro|mashy|goddess ?mashiro)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
-		else if (/(why are there )?so many goddess(es)?( in here)?\??/i.test(msg)) this.say(connection, room, 'Mashiro is just a Briyella wannabe o3o');
-//		if (/(9[0-9]|100)% compatible/i.test(msg)) {
-//			var rand = ~~(2 * Math.random()) + 1;
-//			if (rand == 1) this.say(connection, room, '__it was meant to be :O__');
-//			if (rand == 2) this.say(connection, room, '/me plays wedding music');
-//		}
-		else if (/69% compatible/i.test(msg)) this.say(connection, room, '__l-lewd..!! ;~;__');
-		else if (/(1| )[0-9]% compatible/i.test(msg)) this.say(connection, room, '__rip ;-;__');
+		else if (/(mashi(ro)?|mashy)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
 //		else if (/I(\'?m| am) back/i.test(msg)) this.say(connection, room, 'Hi back, I am MashiBot o3o');
 //		else if (/I(\'?m| am) tired/i.test(msg)) this.say(connection, room, 'Hi tired, I am MashiBot o3o');
 //		else if (/I(\'?m| am) hungry/i.test(msg)) this.say(connection, room, 'Hi hungry, I am MashiBot o3o');
-		else if (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? (goddess)? ?mash(y|iro)/i.test(msg)) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
+		else if (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? ?mash(y|iro)?/i.test(msg)) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
 
 //		if (/(rekt|burn)/i.test(msg)) this.say(connection, room, '!data Rawst Berry');
 		
 		//Favorite Pokemon
-		else if (/what(\'s| is)? (goddess ?)?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
+		else if (/what(\'s| is)? ?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
 		
 		//League Names
-		if (/(does)? ?(some|any)(one|1|body) (here)? ?play (league( of legends)?|lol)/i.test(msg)) this.say(connection, room, 'Add Mashiro-chan on League if you want to play: LeInfiniti');
+//		if (/(does)? ?(some|any)(one|1|body) (here)? ?play (league( of legends)?|lol)/i.test(msg)) this.say(connection, room, 'Add Mashiro-chan on League if you want to play: LeInfiniti');
 		
 		//osu! room
 		if (/(pronounce|say) osu/i.test(msg)) {
@@ -566,10 +556,10 @@ exports.parse = {
 		if (triviaActive == true) {
 			var self = this;
 			if (toId(msg) == toId(Trivia[questionCounter].answer)) {
-				this.say(connection, room, '**' + by + '** has gotten the answer correct!');
-				questionCounter = Math.round(Math.random() * Object.keys(Trivia).length);
 				if (!participants[toId(by)]) participants[toId(by)] = 1;
 				else participants[toId(by)]++;
+				this.say(connection, room, '**' + by + '** has gotten the answer correct! Points: ' + participants[toId(by)]);
+				questionCounter = Math.round(Math.random() * Object.keys(Trivia).length);
 				if (participants[toId(by)] == 3) {
 					var winner = by;
 					setTimeout(function(){self.say(connection, room, 'Congratulations **' + winner + '** on winning this trivia session!^-^');}, 2000);
