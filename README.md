@@ -11,14 +11,21 @@ bit.ly API: ```npm install node-bitlyapi```
 
 osu! API: ```npm install osu-api```
 
-
 ## Setting Up Your Bot
 
 ##### Create An Account
 Create an account for your bot on PS, pick a username, and register it with a password of your choice.
 
-##### Edit the Config
-First off, you should rename ```config-example.js``` to just ```config.js```.
+##### Download Files
+Download all of these files and put them somewhere on your computer in a folder, preferrable named after your bot.
+
+##### Download Node.js
+To run your bot, you must first download a program called [node.js](https://nodejs.org/download/).
+Once it is downloaded, find ```Node.js command prompt``` and run it.
+In the terminal window that opens up, type ```npm install``` and press Enter.
+
+##### Edit the Config File
+First off, you should copy the code in ```config-example.js``` into a new file named ```config.js```.
 Here are a list of things to look over:
 * ```exports.server``` should be ```'sim.smogon.com'``` if you plan on connecting to the main PS server
 * ```exports.port``` should be ```8000``` for main PS server
@@ -44,6 +51,17 @@ Here are a list of things to look over:
   * Example: ```'https://github.com/mashirochan/MashiBot'```
 * ```exports.avatarNumber``` is the number of the avatar that you want your bot to have
   * Example: ```'155'```
+
+##### Editing the Package File
+The ```package.json``` lists information about the bot. Some things to change are:
+  * ```"name"``` is the name of your bot
+  * ```"url"``` is the link to your bot's GitHub repository
+  * ```"name"``` the second name is your username
+
+## Running Your Bot
+To run your bot, run the program ```Node.js command prompt```. Next, find the file path to your bot's folder. For example, mine is saved on my desktop so the file path is "C:\Users\Mashiro\Desktop\MashiBot\Pokemon-Showdown-Bot-master".
+In the terminal window type ```cd [your file path]```, and then press Enter.
+Next, type ```node main.js``` and press Enter again to start your bot. You should see things start to pop up, confirming connection to the server and also the joining of the rooms that it was assigned to join.
 
 ## Making Commands
 
@@ -87,4 +105,65 @@ say: function(arg, by, room, con) {
 		this.say(con, room, arg);
 },
 ```
-Let's say it's a nice, warm summer day and a user is sitting in their basement on PS, chatting in the Tech & Code room, under the username MashiIsCool3327. Their rank is ~, and the ```say``` command was used to set ```say``` to #. If they were to type "#say Hello" in the chat, the function would first call the ```canUse``` function. ```by```, aka the user, has a rank of ~, which is higher than #, in the ```room```, aka 'techcode', so the function returns ```true```. Since ```!true``` is ```false```, the function does not return ```false``` and continues. Remember how I told you how to output stuff up above? Well the function uses ```this.say``` to output the ```arg```, aka 'Hello', in the ```room```, aka 'techcode'. *Spooky!*
+Let's say it's a nice, warm summer day and a user is sitting in their basement on PS, chatting in the Tech & Code room, under the username MashiIsCool3327. Their rank is ~, and the ```set``` command was used to set ```say``` to #. If they were to type "#say Hello" in the chat, the function would first call the ```canUse``` function. ```by```, aka the user, has a rank of ~, which is higher than #, in the ```room```, aka 'techcode', so the function returns ```true```. Since ```!true``` is ```false```, the function does not return ```false``` and continues. Remember how I told you how to output stuff up above? Well the function uses ```this.say``` to output the ```arg```, aka 'Hello', in the ```room```, aka 'techcode'. *Spooky!*
+
+##Useful Functions
+There are several functions that make your life as a programmer much, much easier. Some are defined in the bot's code, but most of them are pre-defined functions that are commonly used in JavaScript.
+
+##### toId
+```toId``` is a function that takes in a ```string``` parameter and puts it in all lowercase, as well as removes all spaces and anything that isn't a number or letter.
+```javascript
+toId(arg)
+```
+  * ```arg``` is the string that you want to pass into the ```toId``` function.
+  * **Input**: String
+  * **Output**: String with no symbols, spaces, and all lowercase
+
+###### Example
+```javascript
+var a = toId('+Mashiro-chan');
+console.log(a);
+mashirochan
+```
+
+##### indexOf
+```javascript
+[string].indexOf('[search term]', [index])
+```
+  * ```string``` is the string variable that you want to search through
+  * ```search term``` is a string that you want to search for in the string variable
+  * ```index``` is the index in the string variable that you want to start searching at
+  * **Input**: String, Search term
+  * **Output**: Index of where the Search term first occurs in the String
+  * *Note: If the search term is not in the string variable, then the function will return -1*
+
+###### Example
+```javascript
+var a = 'Hello, my name is bob.';
+console.log(a.indexOf('o'));
+4
+console.log(a.indexOf('o', 6));
+19
+```
+
+##### split
+```javascript
+[string].split('split term');
+```
+  * ```string``` is the string variable that you want to search through
+  * ```split term``` is a string that you want to split the string variable by
+  * **Input**: String, Split term
+  * **Output**: An array, each term being the parts of the string in between the Split term
+  * *Note: If the split term is not in the string variable, then the function will return an error*
+
+###### Example
+```javascript
+var a = 'Ninetales, Squirtle, Pichu';
+a.split(', ');
+console.log(a[0]);
+Ninetales
+console.log(a[1]);
+Squirtle
+console.log(a[2]);
+Pichu
+```
