@@ -64,7 +64,7 @@ exports.debuglevel = 3;
 
 // Users who can use all commands regardless of their rank. Be very cautious
 // with this, especially on servers other than main.
-exports.excepts = ['goddessmashiro'];
+exports.excepts = ['yourusername'];
 
 // Whitelisted users are those who the bot will not enforce moderation for.
 exports.whitelist = [];
@@ -78,6 +78,9 @@ exports.botguide = 'http://pastebin.com/QGrSXCQ3';
 
 // Add a link to the git repository for the bot here for .git to link to.
 exports.fork = 'https://github.com/mashirochan/MashiBot';
+
+// Add a link to the git repository for Mashiro-chan's Bot Shell
+exports.botshell = 'https://github.com/mashirochan/pokemon-showdown-bot';
 
 // This allows the bot to act as an automated moderator. If enabled, the bot will
 // mute users who send 6 lines or more in 6 or fewer seconds for 7 minutes. NOTE: THIS IS
