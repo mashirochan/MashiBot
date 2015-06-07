@@ -11,6 +11,10 @@ bit.ly API: ```npm install node-bitlyapi```
 
 osu! API: ```npm install osu-api```
 
+request API: ```npm install request```
+
+
+
 ## Setting Up Your Bot
 
 ##### Create An Account
