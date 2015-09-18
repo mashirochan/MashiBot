@@ -182,13 +182,9 @@ if (config.watchconfig) {
 
 global.isAfk = false;
 global.hasNum = /\d/g;
-global.questionCounter;
-global.participants = {"johnny":0,"susan":2};
-global.triviaActive = false;
-global.Movedamage = require('./movedamage.js').movedamage;
 global.leagueItems = require('./leagueItems.js').leagueItems;
 global.leagueChamps = require('./leagueChamps.js').leagueChamps;
-global.Trivia = require('./trivia.js').trivia;
+global.Pokedex = require('./pokedex.js').pokedex;
 
 
 // And now comes the real stuff...
