@@ -53,57 +53,29 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Developer commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
-	
-	/**
-	 * update is a function that reloads the commands.js file, updating any saved changes
-	 * 
-	 * @param commands.js exists
-	 * @param user has a rank of Admin (~) or up
-	 * 
-	 * @return {String} - If there is an error, log in the console
-	 * @return {String} - Sends a confirmation message that commands.js has been updated
-	 */
+
+	reload: 'update',
 	update: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
 		try {
 			this.uncacheTree('./commands.js');
 			Commands = require('./commands.js').commands;
-			this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__Commands updated^-^__');
+			this.say(con, room, '__Commands updated^-^__');
 		}
 		catch (e) {
 			error('failed to update: ' + sys.inspect(e));
 		}
 
 	},
-	/**
-	 * join is a function that makes the bot join the room that the user inputs
-	 * 
-	 * @param user has a rank of Admin (~) or up
-	 * 
-	 * @return {String} - Returns a string that makes the bot join the input room
-	 */
 	join: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
 		this.say(con, room, '/join ' + arg);
 	},
-	/**
-	 * leave is a function that makes the bot leave the room that the user of the command is currently in
-	 * 
-	 * @param user has a rank of Admin (~) or up
-	 * 
-	 * @return {String} - Returns a string that makes the bot leave the current room
-	 */
 	leave: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
+		if (!arg) arg = room;
 		this.say(con, arg, '/leave');
 	},
-	/**
-	 * disconnect is a function that makes the bot leave the server entirely
-	 * 
-	 * @param user has a rank of Admin (~) or up
-	 * 
-	 * @return - Returns a command that closes the connection of the bot
-	 */
 	disconnect: function(arg, by, room, con) {
 		if (!this.hasRank(by, '~')) return false;
 		con.close();
@@ -120,13 +92,6 @@ exports.commands = {
 			this.say(con, room, '/w ' + by + ', AFK mode turned off.');
 		}
 	},
-	/**
-	 * say is a function that makes the bot say what the user inputs, in the specified rooms
-	 * 
-	 * @param user has a username of 'mashirochan'
-	 * 
-	 * @return {String} - Sends a message to the specified room
-	 */
 	custom: 'say',
 	say: function(arg, by, room, con) {
 		if (toId(by) !== 'mashirochan') return false;
@@ -136,14 +101,6 @@ exports.commands = {
 		var message = input[1];
 		this.say(con, tarRoom, message);
 	},
-	/**
-	 * js is a function that alows the testing of JavaScript code in the client
-	 * 
-	 * @param user has a username of 'mashirochan' 
-	 * @param {String} arg - Code that you want to test
-	 * 
-	 * @return returns the output of the code that is input
-	 */
 	java: 'js',
 	code: 'js',
 	js: function(arg, by, room, con) {
@@ -155,13 +112,6 @@ exports.commands = {
 			this.say(con, room, e.name + ": " + e.message);
 		}
 	},
-	/**
-	 * avatar is a function that changes the avatar of the bot
-	 * 
-	 * @param 0 < avatarnumber < 295
-	 * 
-	 * @return sets the bot's avatar to the avatar associated with the specified avatar number
-	 */
 	avatar: function(arg, by, room, con) {
 		if (toId(by) !== 'mashirochan') return false;
 		var avatarnumber = Math.round(stripCommands(arg))
@@ -176,24 +126,25 @@ exports.commands = {
 			this.say(con, room, '/w ' + by + ', __That isn\'t a number... ._.__');
 		}
 	},
+	twitch: 'stream',
+	stream: function(arg, by, room, con) {
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		this.say(con, room, text + 'Mashiro-chan\'s Twitch stream can be found at: twitch.tv/leinfiniti');
+	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Moderation commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
-	warn: function(arg, by, room, con) {
-		if (!this.canUse('warn', by)) return false;
-		var warnMsg = arg.split(', ');
-		this.say(con, room, '/k ' + warnMsg[0] + ', ' + warnMsg[1] + '.__');
-	},
 	rk: 'roomkick',
 	roomkick: function(arg, by, room, con) {
 		if (!(CDchecker.roomkick !== 1)) return false;
-		if (!this.canUse('roomkick', by)) return false;
+		if (!this.hasRank(by, '@#&~')) return false;
 		CDchecker.roomkick = 1;
-		this.say(room, '/roomban ' + arg + ', you have been bad!!! D:<');
+		this.say(room, '/roomban ' + arg);
 		this.say(con, room, '/unroomban ' + arg);
-		this.say(con, room, '/modnote ' + arg + ' has been roomkick\'ed by ' + by + '!');
+		this.say(con, room, '/modnote ' + arg + ' has been roomkick\'ed by ' + by + '.');
 		setTimeout(function() {
 			CDchecker.roomkick = 0;
 		}, CDtime.roomkick * 1000);
@@ -210,8 +161,6 @@ exports.commands = {
 			favemap: 1,
 			setquote: 1,
 			quote: 1,
-			setsong: 1,
-			song: 1,
 			moderation: 1,
 			say: 1,
 			warn: 1,
@@ -226,8 +175,6 @@ exports.commands = {
 			unbanword: 1,
 			viewbannedwords: 1,
 			js: 1,
-			math: 1,
-			derive: 1,
 			moveeffectiveness: 1,
 			ranked: 1,
 			unranked: 1,
@@ -238,7 +185,6 @@ exports.commands = {
 			itemsearch: 1,
 			champion: 1,
 			item: 1,
-			trivia: 1,
 			score: 1,
 			cast: 1,
 			plot: 1,
@@ -354,128 +300,130 @@ exports.commands = {
 			}
 		}
 	},
-	disablecommands: function(arg, by, room, con) {
-		if (!this.canUse('disablecommands', by)) return false;
-		config.defaultrank = '#';
-		this.say(con, room, 'Commands now disabled.');
+	ab: 'blacklist',
+	autoban: 'blacklist',
+	blacklist: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.userlog) this.userlog = {};
+		if (!arg || arg.length > 18) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__A username must be input!__');
+		var user = toId(arg);
+		if (this.userlog[user] && this.userlog[user]["bl"] && this.userlog[user]["bl"] == true) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__This user is already in the blacklist!__');
+		if (!this.userlog[user]) this.userlog[user] = {};
+		this.userlog[user]["bl"] = true;
+		this.writeUserlog();
+		this.say(con, room, 'User \"' + arg + '\" has been added to the blacklist!');
 	},
-	enablecommands: function(arg, by, room, con) {
-		if (!this.canUse('enablecommands', by)) return false;
-		config.defaultrank = '+';
-		this.say(con, room, 'Commands now enabled.');
-	},
-	canmod: 'canmoderate',
-	canmoderate: function(arg, by, room, con) {
-		if (!this.canUse('canmoderate', by)) return false;
-		if (config.allowmute == true) {
-			this.say(con, room, config.nick + ' **can** apply moderation to users.');
-		}
-		else if (config.allowmute == false) {
-			this.say(con, room, config.nick + ' **cannot** apply moderation to users.');
-		}
-	},
-	watch: 'moderation',
-	mod: 'moderation',
-	moderation: function(arg, by, room, con) {
-		if (!this.canUse('moderation', by)) return false;
-		var toggle = toId(stripCommands(arg));
-
-		switch (toggle) {
-			case 'on':
-			case 'true':
-				if (config.allowmute === true) {
-					this.say(con, room, 'I\'m already watching. __I\'m always watching.__');
-				}
-				else {
-					config.allowmute = true;
-					this.say(con, room, 'I am now watching all of you o.o');
-				}
-				break;
-			case 'off':
-			case 'false':
-				if (config.allowmute === false) {
-					this.say(con, room, 'I\'m already on break, leave me alone! ;~;');
-				}
-				else {
-					config.allowmute = false;
-					this.say(con, room, 'I\'m going off duty, enjoy your freedom everyone!^-^');
-				}
-				break;
-			case 'cmdmaker':
-				this.say(con, room, 'This command was made by Rhythms! Thanks to him!!! ^-^');
-				break;
-			default:
-				this.say(con, room, '\'' + toggle + '\' is not a valid choice for moderation toggling... The correct syntax is ' + config.commandcharacter + 'moderation **[on/true]/[off/false]** ^-^');
-		}
+	unab: 'unblacklist',
+	unautoban: 'unblacklist',
+	unblacklist: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.userlog) this.userlog = {};
+		if (!arg || arg.length > 18) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__A username must be input!__');
+		var user = toId(arg);
+		if (this.userlog[user] && this.userlog[user]["bl"] && this.userlog[user]["bl"] == false) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__This user is not in the blacklist!__');
+		if (!this.userlog[user]) this.userlog[user] = {};
+		this.userlog[user]["bl"] = false;
+		this.writeUserlog();
+		this.say(con, room, 'User \"' + arg + '\" has been removed from the blacklist!');
 	},
 	banphrase: 'banword',
 	banword: function(arg, by, room, con) {
-		if (!this.hasRank(by, '#~')) return false;
-		if (!this.settings.bannedphrases) this.settings.bannedphrases = {};
-		arg = arg.trim().toLowerCase();
-		if (!arg) return false;
-		var tarRoom = room;
-
-		if (room.charAt(0) === ',') {
-			if (!this.hasRank(by, '~')) return false;
-			tarRoom = 'global';
-		}
-
-		if (!this.settings.bannedphrases[tarRoom]) this.settings.bannedphrases[tarRoom] = {};
-		if (arg in this.settings.bannedphrases[tarRoom]) return this.say(con, room, "Phrase \"" + arg + "\" is already banned.");
-		this.settings.bannedphrases[tarRoom][arg] = 1;
-		this.writeSettings();
-		this.say(con, room, "Phrase \"" + arg + "\" is now banned.");
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedWords["words"]) this.bannedWords["words"] = [];
+		this.bannedWords["words"].push(arg.toLowerCase());
+		this.writeBannedWords();
+		this.say(con, room, 'Phrase \"' + arg + '\" has been added to the banned words list!');
+	},
+	bansite: 'banwebsite',
+	banwebsite: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedSites["sites"]) this.bannedSites["sites"] = [];
+		this.bannedSites["sites"].push(arg.toLowerCase());
+		this.writeBannedSites();
+		this.say(con, room, 'Site \"' + arg + '\" has been added to the banned sites list!');
 	},
 	unbanphrase: 'unbanword',
 	unbanword: function(arg, by, room, con) {
-		if (!this.hasRank(by, '#~')) return false;
-		arg = arg.trim().toLowerCase();
-		if (!arg) return false;
-		var tarRoom = room;
-
-		if (room.charAt(0) === ',') {
-			if (!this.hasRank(by, '~')) return false;
-			tarRoom = 'global';
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedWords["words"]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__There are no banned phrases ;~;__');
+		var wordFound = false;
+		for (var i in this.bannedWords["words"]) {
+			if (toId(this.bannedWords["words"][i]) == toId(arg)) {
+				wordFound = true;
+				this.bannedWords["words"].splice(i, 1);
+				this.writeBannedWords();
+			}
 		}
-
-		if (!this.settings.bannedphrases || !this.settings.bannedphrases[tarRoom] || !(arg in this.settings.bannedphrases[tarRoom]))
-			return this.say(con, room, "Phrase \"" + arg + "\" is not currently banned.");
-		delete this.settings.bannedphrases[tarRoom][arg];
-		if (!Object.size(this.settings.bannedphrases[tarRoom])) delete this.settings.bannedphrases[tarRoom];
-		if (!Object.size(this.settings.bannedphrases)) delete this.settings.bannedphrases;
-		this.writeSettings();
-		this.say(con, room, "Phrase \"" + arg + "\" is no longer banned.");
+		if (wordFound == true) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Phrase \"' + arg + '\" has been removed from the banlist.');
+		this.say(con, room, 'Phrase \"' + arg + '\" is not currently banned.');
+	},
+	unbansite: 'unbanwebsite',
+	unbanwebsite: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedSites["sites"]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__There are no banned sites ;~;__');
+		var siteFound = false;
+		for (var i in this.bannedSites["sites"]) {
+			if (toId(this.bannedSites["sites"][i]) == toId(arg)) {
+				siteFound = true;
+				this.bannedSites["sites"].splice(i, 1);
+				this.writeBannedSites();
+			}
+		}
+		if (siteFound == true) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Website \"' + arg + '\" has been removed from the banlist.');
+		this.say(con, room, 'Website \"' + arg + '\" is not currently banned.');
 	},
 	viewbannedphrases: 'viewbannedwords',
 	vbw: 'viewbannedwords',
 	viewbannedwords: function(arg, by, room, con) {
-		if (!this.hasRank(by, '@#~')) return false;
-		arg = arg.trim().toLowerCase();
-		var tarRoom = room;
-
-		if (room.charAt(0) === ',') {
-			if (!this.hasRank(by, '~')) return false;
-			tarRoom = 'global';
-		}
-
-		var text = "";
-		if (!this.settings.bannedphrases || !this.settings.bannedphrases[tarRoom]) {
-			text = "No phrases are banned in this room.";
-		}
-		else {
-			if (arg.length) {
-				text = "The phrase \"" + arg + "\" is currently " + (arg in this.settings.bannedphrases[tarRoom] ? "" : "not ") + "banned " +
-					(room.charAt(0) === ',' ? "globally" : "in " + room) + ".";
-			}
-			else {
-				var banList = Object.keys(this.settings.bannedphrases[tarRoom]);
-				if (!banList.length) return this.say(con, room, "No phrases are banned in this room.");
-				this.uploadToHastebin(con, room, by, "The following phrases are banned " + (room.charAt(0) === ',' ? "globally" : "in " + room) + ":\n\n" + banList.join('\n'));
-				return;
-			}
-		}
-		this.say(con, room, text);
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedWords["words"] || this.bannedWords["words"] == []) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__There are no banned websites!__');
+		this.uploadToHastebin(con, room, by, 'Banned phrases: ' + this.bannedWords["words"].join(', '));
+	},
+	viewbannedsites: 'viewbannedwebsites',
+	vbs: 'viewbannedwebsites',
+	viewbannedwebsites: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (!this.bannedSites["sites"] || this.bannedSites["sites"] == []) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__There are no banned websites!__');
+		this.uploadToHastebin(con, room, by, 'Banned websites: ' + this.bannedSites["sites"].join(', '));
+	},
+	userlog: function(arg, by, room, con) {
+		if (!this.userlog) this.userlog = {};
+		if (!this.userlog) this.userlog = [];
+		var user = toId(arg);
+		if (!this.userlog[user]) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__Not Blacklisted__ | __Warns__: 0 | __Mutes__: 0 | __Bans__: 0');
+		var bl;
+		var warns;
+		var mutes;
+		var bans;
+		if (!this.userlog[user]["bl"]) bl = false;
+		else bl = this.userlog[user]["bl"];
+		if (!this.userlog[user]["warns"]) warns = 0;
+		else warns = this.userlog[user]["warns"];
+		if (!this.userlog[user]["mutes"]) mutes = 0;
+		else mutes = this.userlog[user]["mutes"];
+		if (!this.userlog[user]["bans"]) bans = 0;
+		else bans = this.userlog[user]["bans"];
+		if (bl == true) bl = '**Blacklisted**';
+		else bl = '__Not Blacklisted__';
+		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + bl + ' | __Warns__: ' + warns + ' | __Mutes__: ' + mutes + ' | __Bans__: ' + bans);
+	},
+	youtube: function(arg, by, room, con) {
+		if (!this.hasRank(by, '@#&~')) return false;
+		if (toId(arg) == 'on') {
+			if (!this.settings.youtube) this.settings.youtube = true;
+			else this.settings.youtube = true;
+			this.writeSettings();
+			this.say(con, room, '__YouTube title displays are now on!^-^__');
+		} else if (toId(arg) == 'off') {
+			if (!this.settings.youtube) this.settings.youtube = false;
+			else this.settings.youtube = false;
+			this.writeSettings();
+			this.say(con, room, '__YouTube title displays are now off ;~;__');
+		} else this.say(con, room, 'Command syntax: #youtube ``on|off``');
 	},
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -630,9 +578,10 @@ exports.commands = {
 	},
 	qotd: 'quote',
 	quote: function(arg, by, room, con) {
-		if (!this.hasRank(by, '+%@&#~')) return false;
+		var text = '';
+		if (this.hasRank(by, '+%@&#~')) text += ('/w ' + toId(by) + ', ');
 		if (!this.settings["qotd"]) return this.say(con, room, '__No quote has been set ;-;__');
-		this.say(con, room, 'Quote of the Day: __"' + this.settings["qotd"]["quote"] + '"__ ~' + this.settings["qotd"]["by"]);
+		this.say(con, room, text + 'Quote of the Day: __"' + this.settings["qotd"]["quote"] + '"__ ~' + this.settings["qotd"]["by"]);
 	},
 
 
@@ -640,14 +589,6 @@ exports.commands = {
 /// Offline PM Commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 
-	/**
-	 * message is a function that sends messages to other users, usually used to message offline users
-	 * 
-	 * @param {String} username - The user that you want to send a message to
-	 * @param {String} message  - The message that you want to send to the specified user
-	 * 
-	 * @return {String} text    - Returns a message sent confirmation message and stores the message to send it later
-	 */
 	mail: 'message',
 	msg: 'message',
 	message: function(arg, by, room, con) {
@@ -674,13 +615,6 @@ exports.commands = {
 		this.writeMessages();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Message has been sent successfully to ' + input[0] + '!^-^__');
 	},
-	/**
-	 * checkmail is a function that checks the user's mail, clearing them after they are sent
-	 * 
-	 * @param user has messages stored for them in the messages JSON
-	 * 
-	 * @return {String} - Returns any messages for the user in the messages JSON
-	 */
 	checkmessages: 'checkmail',
 	checkmsgs: 'checkmail',
 	checkmail: function(arg, by, room, con) {
@@ -691,14 +625,6 @@ exports.commands = {
 		delete this.messages[toId(by)]["mail"];
 		this.writeMessages();
 	},
-	/**
-	 * blockmail is a function that blocks all incoming messages for the user
-	 * 
-	 * @param {String}         - If 'status' property of the user's message object exists, if so, what the status is
-	 * 
-	 * @return {String}        - If mail is already being blocked, returns an error message
-	 * @return {String} status - Sets the user's message status in the JSON to 'off' 
-	 */
 	blockmessages: 'blockmail',
 	blockmsgs: 'blockmail',
 	blockmail: function(arg, by, room, con) {
@@ -710,15 +636,6 @@ exports.commands = {
 		this.writeMessages();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Now blocking all mail!^-^__');
 	},
-	/**
-	 * allowmail is a function that allows all incoming messages for the user
-	 * 
-	 * @param {String}         - If 'status' property of the user's message object exists, if so, what the status is
-	 * 
-	 * @return {String}        - If mail is already being allowed, returns an error message
-	 * @return {String} status - Sets the user's message status in the JSON to 'on' 
-	 * 						   - Send a user status change confirmation
-	 */
 	allowmessages: 'allowmail',
 	allowmsgs: 'allowmail',
 	allowmail: function(arg, by, room, con) {
@@ -729,16 +646,6 @@ exports.commands = {
 		this.writeMessages();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__All mail now allowed!^-^__');
 	},
-	/**
-	 * clearmail is a function that clears all of the mail in either the user, or entire messages JSON
-	 * 
-	 * @param {String} arg - If arg exists, assume it is a username 
-	 * 
-	 * @return {String} - If arg exists, delete all messages in the user's JSON object
-	 * 					- Send a user message deletion confirmation
-	 * @return {String} - If arg does not exist, delete all messages in the messages JSON
-	 * 					- Send a total message JSON wipe confirmation
-	 */
 	clearmessages: 'clearmail',
 	clearmsgs: 'clearmail',
 	clearmail: function(arg, by, room, con) {
@@ -811,8 +718,8 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
 	setfavemon: function(arg, by, room, con) {
-		if (!this.settings.favemon) this.settings.favemon = {};
-		if (!this.settings.favemon[toId(by)]) this.settings.favemon[toId(by)] = {};
+		if (!this.userlog["favemon"]) this.userlog["favemon"] = {};
+		if (!this.userlog[toId(by)]["favemon"]) this.userlog[toId(by)]["favemon"] = {};
 		var foundMon = false;
 		var monId = toId(arg.replace(/(shiny|mega)/i, ''));
 		for (var mon in Pokedex) {
@@ -822,22 +729,22 @@ exports.commands = {
 			}
 		}
 		if (!foundMon) return this.say(con, room, '\'' + arg + '\' is not a valid Pokemon!');
-		this.settings["favemon"][toId(by)] = arg;
-		this.writeSettings();
+		this.userlog[toId(by)]["favemon"] = arg;
+		this.writeUserlog();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite pokemon has been set to ' + arg + '!^-^__');
 	},
 	favemon: function(arg, by, room, con) {
-		if (!this.settings["favemon"]) this.settings["favemon"] = {};
+		if (!this.userlog[toId(by)]) this.userlog[toId(by)] = {};
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (this.settings["favemon"][toId(by)]) return this.say(con, room, 'There is no favorite Pokemon set for ' + by + '.');
-			return this.say(con, room, by + '\'s favorite Pokemon is __' + this.settings["favemon"][toId(by)] + '__!');
+			if (!this.userlog[toId(by)]["favemon"]) return this.say(con, room, 'You have not set your favorite Pokemon.');
+			return this.say(con, room, by + '\'s favorite Pokemon is __' + userlog[toId(by)]["favemon"] + '__!');
 		}
 		var user = toId(arg);
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
-		if (!this.settings["favemon"][user]) return this.say(con, room, text + 'There is no favorite Pokemon set for ' + arg + '.');
-		this.say(con, room, text + arg + '\'s favorite Pokemon is __' + this.settings["favemon"][user] + '__!');
+		if (!this.userlog[toId(by)]["favemon"]) return this.say(con, room, text + 'There is no favorite Pokemon set for ' + arg + '.');
+		this.say(con, room, text + arg + '\'s favorite Pokemon is __' + userlog[toId(by)]["favemon"] + '__!');
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -851,9 +758,9 @@ exports.commands = {
 			client_id: "Something",
 			client_secret: "Something"
 		});
-		if (!this.settings["selfie"]) this.settings["selfie"] = {};
+		if (!this.userlog[toId(by)]) this.userlog[toId(by)] = {};
 		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http.');
-		if (!this.settings["selfie"][toId(by)]) this.settings["selfie"][toId(by)] = {};
+		if (!this.userlog[toId(by)]["selfie"]) this.userlog[toId(by)]["selfie"] = {};
 		Bitly.setAccessToken("c8a15558cbf4a555391b974849d7684e211fb707");
 		Bitly.shortenLink(arg, function(err, results) {
 			var resObject = eval("(" + results + ")");
@@ -872,8 +779,8 @@ exports.commands = {
 			}
 			else {
 				clearInterval(timer);
-				self.settings["selfie"][toId(by)] = bitLink;
-				self.writeSettings();
+				self.userlog[toId(by)]["selfie"] = bitLink;
+				self.writeUserlog();
 				self.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your selfie has been set!^-^__');
 			}
 		}, 100);
@@ -882,14 +789,13 @@ exports.commands = {
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (!this.settings["selfie"][toId(by)]) return this.say(con, room, '__No selfie has been set ;-;__');
-			return this.say(con, room, text + by + '\'s selfie is ' + this.settings["selfie"][toId(by)] + '!');
+			if (!this.userlog[toId(by)]["selfie"]) return this.say(con, room, '__No selfie has been set ;-;__');
+			return this.say(con, room, text + by + '\'s selfie is ' + this.userlog[toId(by)]["selfie"] + '!');
 		}
 		var user = toId(arg);
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
-		if (!this.settings["selfie"][user]) return this.say(con, room, '__No selfie has been set ;-;__');
-		this.say(con, room, text + arg + '\'s selfie:' + this.settings["selfie"][user] + '!');
-
+		if (!this.userlog[user]["selfie"]) return this.say(con, room, '__No selfie has been set ;-;__');
+		this.say(con, room, text + arg + '\'s selfie:' + this.userlog[user]["selfie"] + '!');
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -924,197 +830,178 @@ exports.commands = {
 			self.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + resObject.data.url);
 		});
 	},
-	math: function(arg, by, room, con) {
-		var input = arg.replace(/ /g,'');
-		var sign = '';
-		var solution = '';
-		if (input.indexOf('+') > -1) sign = '+';
-		else if (input.indexOf('+') > -1) sign = '+';
-		else if (input.indexOf('-') > -1) sign = '-';
-		else if (input.indexOf('*') > -1) sign = '*';
-		else if (input.indexOf('x') > -1) sign = 'x';
-		else if (input.indexOf('/') > -1) sign = '/';
-		else if (input.indexOf('%') > -1) sign = '%';
-		else if (input.indexOf('^') > -1) sign = '^';
-		else if (input.indexOf('pow') > -1) sign = '^';
-		else if (input.indexOf('power') > -1) sign = '^';
-		else if (input.indexOf('sqrt') > -1) {
-			sign = 'sqrt';
-			var num = input.substring(input.indexOf(sign) + sign.length, input.length);
-			solution = Math.sqrt(parseInt(num, 10)).toFixed(4);
-			return this.say(con, room, 'sqrt(' + num + ') = ' + solution);
-		} else if (input.indexOf('root') > -1) {
-			sign = 'root';
-			var num = input.substring(input.indexOf(sign) + sign.length, input.length);
-			solution = Math.sqrt(parseInt(num, 10)).toFixed(4);
-			return this.say(con, room, 'sqrt(' + num + ') = ' + solution);
-		} else return this.say(con, room, '__Please use a proper sign!__');
-		var num1 = parseInt(input.substring(0, input.indexOf(sign)), 10);
-		var num2 = parseInt(input.substring(input.indexOf(sign) + sign.length, input.length), 10);
-		if (sign == '+') solution = num1 + num2;
-		else if (sign == '-') solution = num1 - num2;
-		else if (sign == '*' || sign == 'x') solution = num1 * num2;
-		else if (sign == '/') solution = num1 / num2;
-		else if (sign == '%') solution = num1 % num2;
-		else if (sign == '^') solution = Math.pow(num1, num2);
-		if (sign == '/' && num2 == 0) return this.say(con, room, 'You cannot divide by zero ;~;');
-		this.say(con, room, num1 + ' ' + sign + ' ' + num2 + ' = ' + solution);
-	},
-	derive: function(arg, by, room, con) {
-		var input = arg.replace(/ /g, '');
-		var terms = input.split(/[+\-]+/);
-		var signs = [];
-		var inputArray = input.split('');
-		for (var i in inputArray) if (inputArray[i] == '+' || inputArray[i] == '-') signs.push(inputArray[i]);
-		for (var i in terms) {
-			if (terms[i].indexOf('xsin(') > -1) {
-				var base = parseInt(terms[i].substring(0, terms[i].indexOf('xsin(')));
-				if (!base) var base = 1;
-				var value = terms[i].substring(terms[i].indexOf('xsin(') + 5, terms[i].indexOf(')'));
-				if (value.indexOf('x^') > -1) {
-					var valueBase = parseInt(value.split('x^')[0]);
-					if (!valueBase) var valueBase = 1;
-					var valuePower = parseInt(value.split('x^')[1]);
-					if (valuePower - 1 == 1) var newPower = '';
-					else var newPower = '^' + valuePower - 1;
-					terms[i] = base + '(xcos(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ') + sin(' + value + '))';
-				} else if (value.indexOf('x') > -1) {
-					
-					terms[i] = base + '(xcos(' + value + ')(' + (valueBase * valuePower) + 'x' + valueBase + ') + sin(' + value + '))';
+	userinfo: function(arg, by, room, con) {
+		var user = '';
+		if (!arg) user = toId(by);
+		else user = toId(arg);
+		if (!this.userlog) return this.userlog = {};
+		if (!this.userlog[user]) this.userlog[user] = {};
+		var favemon;
+		if (!this.userlog[user]["favemon"]) favemon = 'Not set yet!';
+		else favemon = this.userlog[user]["favemon"];
+		var faveanime = '';
+		if (this.userlog[user]["faveanime"]) faveanime = '\n\n//////////////////////////////////////////////////\n/// Favorite Anime ///////////////////////////////\n//////////////////////////////////////////////////\n\n' + this.userlog[user]["faveanime"];
+		var mal = '';
+		if (this.userlog[user]["mal"]) mal = '\n\n//////////////////////////////////////////////////\n/// MAL //////////////////////////////////////////\n//////////////////////////////////////////////////\n\n' + this.userlog[user]["mal"];
+		var favemap = '';
+		if (this.userlog[user]["favemap"]) favemap = '\n\n//////////////////////////////////////////////////\n/// Favorite Beatmap /////////////////////////////\n//////////////////////////////////////////////////\n\n' + this.userlog[user]["favemap"];
+	    var selfie = '';
+	    if (this.userlog[user]["selfie"]) selfie = '\n\nSelfie: ' + this.userlog[user]["selfie"];
+	    var self = this;
+		request('http://pokemonshowdown.com/users/' + user + '.json', function(err, response, body) {
+			var info = JSON.parse(body);
+			var regTime = new Date(1000 * info.registertime);
+			var year = regTime.getFullYear();
+			var monthInt = regTime.getMonth() + 1;
+			var day = regTime.getDate();
+			var month = '';
+			if (monthInt === 1) month = 'January';
+			else if (monthInt === 2) month = 'February';
+			else if (monthInt === 3) month = 'March';
+			else if (monthInt === 4) month = 'April';
+			else if (monthInt === 5) month = 'May';
+			else if (monthInt === 6) month = 'June';
+			else if (monthInt === 7) month = 'July';
+			else if (monthInt === 8) month = 'August';
+			else if (monthInt === 9) month = 'September';
+			else if (monthInt === 10) month = 'October';
+			else if (monthInt === 11) month = 'November';
+			else if (monthInt === 12) month = 'December';
+			var suffix = '';
+			if (day % 10 === 0 || day % 10 === 4 || day % 10 === 5 || day % 10 === 6 || day % 10 === 7 || day % 10 === 8 || day % 10 === 9) suffix = 'th';
+			if (day % 10 === 1) suffix = 'st';
+			if (day % 10 === 2) suffix = 'nd';
+			if (day % 10 === 3) suffix = 'rd';
+			var date = month + ' ' + day + suffix + ', ' + year;
+			var rankedLaddersTitle = '//////////////////////////////////////////////////\n/// Ranked Ladders ///////////////////////////////\n//////////////////////////////////////////////////';
+			var faveMonTitle = '//////////////////////////////////////////////////\n/// Favorite Pokemon /////////////////////////////\n//////////////////////////////////////////////////';
+			var batRatings = '';
+			if (Object.keys(info.ratings).length === 0) {
+				batRatings = 'This user is not ranked in any ladders!\n\n';
+			} else {
+				for (var i in info.ratings) {
+					var dashes = '';
+					for (var j = 51 - (4 + i.length); j > 0; j--) dashes += '-';
+					batRatings += ('- ' + i + ' ' + dashes + '\n\nelo: ' + Math.round(info.ratings[i].elo) + '\ngxe: ' + Math.round(info.ratings[i].gxe) + '\n\n');
 				}
-			} else if (terms[i].indexOf('sin(') > -1) {
-				var value = terms[i].substring(4, terms[i].indexOf(')'));
-				if (value.indexOf('x^') > -1) {
-					var valueBase = parseInt(value.split('x^')[0]);
-					if (!valueBase) var valueBase = 1;
-					var valuePower = parseInt(value.split('x^')[1]);
-					if (valuePower - 1 == 1) var newPower = '';
-					else var newPower = '^' + valuePower - 1;
-					terms[i] = 'cos(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ')';
-				} else if (value.indexOf('x') > -1) {
-					var valueBase = parseInt(value.substring(0, value.indexOf('x')));
-					terms[i] = 'cos(' + value + ')(' + valueBase + ')';
-				} else if (value.indexOf('x') == -1) {
-					terms.splice(i, 1);
-					signs.splice(i, 1);
-				}
-			} else if (terms[i].indexOf('cos(') > -1) {
-				var value = terms[i].substring(4, terms[i].indexOf(')'));
-				if (value.indexOf('x^') > -1) {
-					var valueBase = parseInt(value.split('x^')[0]);
-					if (!valueBase) var valueBase = 1;
-					var valuePower = parseInt(value.split('x^')[1]);
-					if (valuePower - 1 == 1) var newPower = '';
-					else var newPower = '^' + valuePower - 1;
-					terms[i] = 'sin(' + value + ')(' + (valueBase * valuePower) + 'x' + newPower + ')';
-					if (signs[i - 1] == '+') signs[i - 1] = '-';
-					else if (signs[i - 1] == '-') signs[i - 1] = '+';
-				} else if (value.indexOf('x') > -1) {
-					var valueBase = parseInt(value.substring(0, value.indexOf('x')));
-					terms[i] = 'sin(' + value + ')(' + valueBase + ')';
-					if (signs[i - 1] == '+') signs[i - 1] = '-';
-					else if (signs[i - 1] == '-') signs[i - 1] = '+';
-				} else if (value.indexOf('x') == -1) {
-					terms.splice(i, 1);
-					signs.splice(i, 1);
-				}
-			} else if (terms[i].indexOf('x^') > -1) {
-				var base = parseInt(terms[i].substring(0, terms[i].indexOf('x^')), 10);
-				if (!base) var base = 1;
-				var power = parseInt(terms[i].substring(terms[i].indexOf('x^') + 2, terms[i].length), 10);
-				var newBase = base * power;
-				var newPower = power - 1;
-				if (newPower == 1) terms[i] = newBase + 'x';
-				else terms[i] = newBase + 'x^' + newPower;
-			} else if (terms[i].indexOf('x') > -1) {
-				var newTerm = terms[i].substring(0, terms[i].indexOf('x'));
-				if (!newTerm) var newTerm = 1;
-				terms[i] = newTerm;
-			} else if (terms[i].indexOf('x') == -1) {
-				terms.splice(i, 1);
-				signs.splice(i, 1);
 			}
-		}
-		var equation = '';
-		if (terms.length == 0) return this.say(con, room, 'f\'(x) = 0');
-		for (var i in terms) {
-			if (i == terms.length - 1) equation += terms[i];
-			else equation += terms[i] + ' ' + signs[i] + ' ';
-		}
-		this.say(con, room, 'f\'(x) = ' + equation);
+			var slashes = '';
+			for (var k = 50 - (5 + info.username.length); k > 0; k--) slashes += '/';
+			self.uploadToHastebin(con, room, by, '/// ' + info.username + ' ' + slashes + '\n\nRegister Date: ' + date + selfie + '\n\n' + rankedLaddersTitle + '\n\n' + batRatings + faveMonTitle + '\n\n' + favemon + faveanime + mal + favemap);
+		});
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Move Effectivity //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
+/// Breeding Room Commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
-	moveef: 'moveeffectiveness',
-	ef: 'moveeffectiveness',
-	moveeffectiveness: function(arg, by, room, con) {
-		arg = arg.replace(/\s/g, '').toLowerCase().split(",");
-		if (arg.length < 2) return this.say(con, room, '__Please input types to determine effectivity.__ ex: (#ef [atk type 1], [def type 1], [def type 2]).');
-		var attacking = arg[0];
-		var defending = arg[1].split(",");
-		if (attacking in Movedex) {
-			attacking = Movedex[attacking].type.toLowerCase();
-		}
-		if (defending[0] in Pokedex) {
-			defending = Pokedex[defending[0]].type;
-		}
-		var types = {"normal":1,"fire":1,"water":1,"grass":1,"electric":1,"ice":1,"fighting":1,"poison":1,"ground":1,"flying":1,"psychic":1,"bug":1,"rock":1,"ghost":1,"dragon":1,"dark":1,"steel":1,"fairy":1};
-		if (!(attacking in types) || !(defending[0] in types) || (defending[1] && !(defending[1] in types))) {
-			return this.say(con, room, '__Please input a valid type!__');
-		} else if (defending[1]) {
-			var damage = Movedamage[attacking].damageDealt[defending[0]] * Movedamage[attacking].damageDealt[defending[1]];
-			var msg = '';
-			switch (damage) {
-				case 0.25: msg += '__It\'s very very uneffective... rip__'; break;
-				case 0.5: msg += '__It\'s not very effective... ;~;__'; break;
-				case 1: msg += '__Normal effectivity__'; break;
-				case 2: msg += '__It\'s super effective!__'; break;
-				case 4: msg += '__It\'s super very effective!!__'; break;
+	trade: function(arg, by, room, con) {
+		if (!this.trades) this.trades = {};
+		if (!this.trades[toId(by)]) this.trades[toId(by)] = {};
+		var pokemon = arg.replace(/\[/g, '').split("]");
+		pokemon.splice(pokemon.length - 1, 1);
+		console.log(pokemon);
+		var foundMon = false;
+		var monId = toId(pokemon[0].replace(/(mega)/i, ''));
+		for(var i in pokemon) {
+			for (var mon in Pokedex) {
+				if (toId(Pokedex[mon].species) === monId) {
+					foundMon = true;
+					break;
+				}
 			}
-			this.say(con, room, msg);
-		} else {
-			var damage = Movedamage[attacking].damageDealt[defending[0]];
-			var msg = '';
-			switch (damage) {
-				case 0.5: msg += '__It\'s not very effective... ;~;__'; break;
-				case 1: msg += '__Normal effectivity__'; break;
-				case 2: msg += '__It\'s super effective!__'; break;
-				case 4: msg += '__It\'s super very effective!!__'; break;
-			}
-			this.say(con, room, msg);
 		}
 	},
-	
+	ivs: function(arg, by, room, con) {
+		var types = ['dark','dragon','ice','psychic','electric','grass','water','fire','steel','ghost','bug','rock','ground','poison','flying','fighting'];
+		var text = '';
+		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
+		if (!arg) return this.say(con, room, text + '__You must input a type to display IVs for ;-;__');
+		if (arg.indexOf(",") > -1 || arg.indexOf("/") > -1) {
+			if (arg.indexOf(",") > -1) var stats = arg.replace(/ /g, '').split(",");
+			else var stats = arg.replace(/ /g, '').split("/");
+			var statsOutput = stats.join("/");
+			if (stats.length < 6) return this.say(con, room, text + '__You must include all 6 stat IVs!__');
+			var a = parseInt(stats[0]) % 2;
+			var b = parseInt(stats[1]) % 2;
+			var c = parseInt(stats[2]) % 2;
+			var e = parseInt(stats[3]) % 2;
+			var f = parseInt(stats[4]) % 2;
+			var d = parseInt(stats[5]) % 2;
+			var type = '';
+			var n = '';
+			var typeNum = Math.floor(((a + (2 * b) + (4 * c) + (8 * d) + (16 * e) + (32 * f)) * 15) / 63);
+			var damage = Math.floor(((a + (2 * b) + (4 * c) + (8 * d) + (16 * e) + (32 * f)) * 40) / 63) + 30;
+			switch (typeNum) {
+				case 0: type += 'Fighting';
+					break;
+				case 1: type += 'Flying';
+					break;
+				case 2: type += 'Poison';
+					break;
+				case 3: type += 'Ground';
+					break;
+				case 4: type += 'Rock';
+					break;
+				case 5: type += 'Bug';
+					break;
+				case 6: type += 'Ghost';
+					break;
+				case 7: type += 'Steel';
+					break;
+				case 8: type += 'Fire';
+					break;
+				case 9: type += 'Water';
+					break;
+				case 10: type += 'Grass';
+					break;
+				case 11: type += 'Electric';
+				n += 'n';
+					break;
+				case 12: type += 'Psychic';
+					break;
+				case 13: type += 'Ice';
+				n += 'n';
+					break;
+				case 14: type += 'Dragon';
+					break;
+				case 15: type += 'Dark';
+					break;
+			}
+			this.say(con, room, text + 'The IVs ' + statsOutput + ' give a' + n + ' **' + type + '** type Hidden Power, with a damage of **' + damage + '**!');
+		} else {
+		var type = toId(arg);
+		if (types.indexOf(type) < 0) return this.say(con, room, text + '__That is not a valid type!__');
+		if (type === 'dark') return this.say(con, room, text + 'IV\'s required for Dark type Hidden Power: 31/31/31/31/31/31');
+		if (type === 'dragon') return this.say(con, room, text + 'IV\'s required for Dragon type Hidden Power: 30/31/31/31/31/31, 31/30/31/31/31/31, 30/30/31/31/31/31, 31/31/30/31/31/31');
+		if (type === 'ice') return this.say(con, room, text + 'IV\'s required for Ice type Hidden Power: 30/31/30/31/31/31, 31/30/30/31/31/31, 30/30/30/31/31/31, 31/31/31/31/31/30');
+		if (type === 'psychic') return this.say(con, room, text + 'IV\'s required for Psychic type Hidden Power: 30/31/31/31/31/30, 31/30/31/31/31/30, 30/30/31/31/31/30, 31/31/30/31/31/30');
+		if (type === 'electric') return this.say(con, room, text + 'IV\'s required for Electric type Hidden Power: 30/31/30/31/31/30, 31/30/30/31/31/30, 30/30/30/31/31/30, 31/31/31/30/31/31');
+		if (type === 'grass') return this.say(con, room, text + 'IV\'s required for Grass type Hidden Power: 30/31/31/30/31/31, 31/30/31/30/31/31, 30/30/31/30/31/31, 31/31/30/30/31/31, 30/31/30/30/31/31');
+		if (type === 'water') return this.say(con, room, text + 'IV\'s required for Water type Hidden Power: 31/30/30/30/31/31, 30/30/30/30/31/31, 31/31/31/30/31/30, 30/31/31/30/31/30');
+		if (type === 'fire') return this.say(con, room, text + 'IV\'s required for Fire type Hidden Power: 31/30/31/30/31/30, 30/30/31/30/31/30, 31/31/30/30/31/30, 30/31/30/30/31/30');
+		if (type === 'steel') return this.say(con, room, text + 'IV\'s required for Steel type Hidden Power: 31/30/30/30/31/30, 30/30/30/30/31/30, 31/31/31/31/30/31, 30/31/31/31/30/31');
+		if (type === 'ghost') return this.say(con, room, text + 'IV\'s required for Ghost type Hidden Power: 31/30/31/31/30/31, 30/30/31/31/30/31, 31/31/30/31/30/31, 30/31/30/31/30/31');
+		if (type === 'bug') return this.say(con, room, text + 'IV\'s required for Bug type Hidden Power: 31/30/30/31/30/31, 30/30/30/31/30/31, 31/31/31/31/30/30, 30/31/31/31/30/30, 31/30/31/31/30/30');
+		if (type === 'rock') return this.say(con, room, text + 'IV\'s required for Rock type Hidden Power: 30/30/31/31/30/30, 31/31/30/31/30/30, 30/31/30/31/30/30, 31/30/30/31/30/30');
+		if (type === 'ground') return this.say(con, room, text + 'IV\'s required for Ground type Hidden Power: 30/30/30/31/30/30, 31/31/31/30/30/31, 30/31/31/30/30/31, 31/30/31/30/30/31');
+		if (type === 'poison') return this.say(con, room, text + 'IV\'s required for Poison type Hidden Power: 30/30/31/30/30/31, 31/31/30/30/30/31, 30/31/30/30/30/31, 31/30/30/30/30/31');
+		if (type === 'flying') return this.say(con, room, text + 'IV\'s required for Flying type Hidden Power: 30/30/30/30/30/31, 31/31/31/30/30/30, 30/31/31/30/30/30, 31/30/31/30/30/30');
+		if (type === 'fighting') return this.say(con, room, text + 'IV\'s required for Fighting type Hidden Power: 30/30/31/30/30/30, 31/31/30/30/30/30, 30/31/30/30/30/30, 31/30/30/30/30/30, 30/30/30/30/30/30');
+		}
+	},
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// osu! Room Commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       
 
-	desu: function(arg, by, room, con) {
-		if (!this.hasRank(by, '+%@&#~') || room.charAt(0) === ',' || room !== 'osu') return false;
-		this.say(con, room, 'kyaaaaa~');
-	},
-	blocko: function(arg, by, room, con) {
-		if (!this.hasRank(by, '+%@&#~') || room.charAt(0) === ',' || room !== 'osu') return false;
-		this.say(con, room, '(/*-*)/ (/*-*)/ ALL HAIL LORD BLOCKO \\(*-*\\) \\(*-*\\)');
-	},
-	users: function(arg, by, room, con) {
-		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
-		this.say(con, room, 'osu! room userlist: http://bit.ly/1xuzSBC');
-	},
-	osu: function(arg, by, room, con) {
-		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
-		this.say(con, room, 'osu! is a Japanese rhythm game where the player hits notes in time with the beat of the music. There are 5 different game modes, the most popular being standard osu! and osu! mania.');
-	},
 	setfavemap: function(arg, by, room, con) {
 		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (!this.settings["favemap"]) this.settings["favemap"] = {};
+		if (!this.userlog[toId(by)]) userlog[toId(by)] = {};
 		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http.');
-		if (!this.settings["favemap"][toId(by)]) this.settings["favemap"][toId(by)] = {};
-		this.settings["favemap"][toId(by)] = arg;
-		this.writeSettings();
+		if (!this.userlog[toId(by)]["favemap"]) this.userlog[toId(by)]["favemap"] = {};
+		this.userlog[toId(by)]["favemap"] = arg;
+		this.writeUserlog();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite beatmap has been set!^-^__');
 	},
 	favemap: function(arg, by, room, con) {
@@ -1122,80 +1009,12 @@ exports.commands = {
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (!this.settings["favemap"][toId(by)]) return this.say(con, room, '' + text + '__No favorite beatmap has been set ;-;__');
-			return this.say(con, room, text + by + '\'s favorite beatmap is ' + this.settings["favemap"][toId(by)] + '!');
+			if (!this.userlog[toId(by)] || !this.userlog[toId(by)]["favemap"]) return this.say(con, room, '' + text + '__No favorite beatmap has been set ;-;__');
+			return this.say(con, room, text + by + '\'s favorite beatmap is ' + this.userlog[toId(by)]["favemap"] + '!');
 		}
 		var user = toId(arg);
-		if (!this.settings["favemap"][user]) return this.say(con, room, '__No favorite beatmap has been set ;-;__');
-		this.say(con, room, text + arg + '\'s favorite is ' + this.settings["favemap"][user] + '!');
-	},
-	user: function(arg, by, room, con, callback, error, output) {
-		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
-		var osuCommand = arg.split(', ');
-		var username = osuCommand[0];
-		var modeType = osuCommand[1];
-		if (this.canUse('user', by)) {
-			if (!modeType) {
-				osu.setMode(osuapi.Modes.osu);
-			}
-			if (!osuCommand[0]) {
-				this.say(con, room, 'Please specify an osu username.');
-			}
-			else if (osuCommand[0] == 'help') {
-				this.say(con, room, 'This command shows the stats of a user. Syntax is #user [username]');
-			}
-			else {
-				var self = this;
-				osu.getUser(username, function(error, output) {
-					var resObject = eval(output);
-					var rank = resObject.pp_rank;
-					var pp = ~~(resObject.pp_raw);
-					var cRank = rank.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-					var cpp = pp.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-					var accLong = parseFloat(resObject.accuracy);
-					var acc = accLong.toFixed(2);
-					self.say(con, room, '**' + username + '**: Level: __' + ~~(resObject.level) + '__ Rank: __' + cRank + '__ Acc: __' + acc + '%__ pp: __' + cpp + '__ Country: __' + resObject.country + '__\nProfile: https://osu.ppy.sh/u/' + resObject.user_id);
-				});
-			}
-		}
-		else {
-			return false;
-		}
-	},
-	map: 'beatmap',
-	beatmap: function(arg, by, room, con, callback, error, output) {
-		if (room !== 'osu') return this.say(con, room, '__That command is not available in this room ;-;__');
-		var osuCommand = arg.split(', ');
-		var id = osuCommand[0].substr(21, osuCommand[0].length);
-		var modeType = osuCommand[1];
-		if (this.canUse('beatmap', by)) {
-			if (!modeType) {
-				osu.setMode(osuapi.Modes.osu);
-			}
-			if (!osuCommand[0]) {
-				this.say(con, room, 'Please input a beatmap link.');
-			}
-			else if (osuCommand[0].length < 29) {
-				this.say(con, room, 'Please input a __specific__ beatmap link (click on the difficulty).');
-			}
-			else if (osuCommand[0] == 'help') {
-				this.say(con, room, 'This command shows the info of a beatmap. Syntax is #beatmap [link]');
-			}
-			else {
-				var self = this;
-				osu.getBeatmap(id, function(error, output) {
-					var resObject = eval(output);
-					var starsLong = parseFloat(resObject.difficultyrating);
-					var stars = starsLong.toFixed(2);
-					self.say(con, room, '| Stars: **6** | CS: **7** | AR: **8** | HP: **9** |');
-
-					//		self.say(con, room, '**' + resObject.title + '** by ' + resObject.artist + ':\n| Stars: **' + stars + '** | CS: **' + resObject.diff_size + '** | AR: **' + resObject.diff_approach + '** | HP: **' + resObject.diff_drain + '** |');
-				});
-			}
-		}
-		else {
-			return false;
-		}
+		if (!this.userlog[user] || !this.userlog[user]["favemap"]) return this.say(con, room, '__No favorite beatmap has been set ;-;__');
+		this.say(con, room, text + arg + '\'s favorite is ' + this.userlog[user]["favemap"] + '!');
 	},
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1203,50 +1022,46 @@ exports.commands = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
 	
 	setmal: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (!this.settings["mal"]) this.settings["mal"] = {};
+		if (!this.userlog[toId(by)]) this.userlog[toId(by)] = {};
 		if (!/https?:\/\//.test(arg)) return this.say(con, room, 'Link must include http, __b-baka..!! ;~;__');
 		if (!/myanimelist.net/.test(arg)) return this.say(con, room, 'Link must be a MAL link! __b-baka..!! ;~;__');
-		if (!this.settings["mal"][toId(by)]) this.settings["mal"][toId(by)] = {};
-		this.settings["mal"][toId(by)] = arg;
-		this.writeSettings();
+		if (!this.userlog[toId(by)]["mal"]) this.userlog[toId(by)]["mal"] = {};
+		this.userlog[toId(by)]["mal"] = arg;
+		this.writeUserlog();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your MAL has been set!^-^__');
 	},
 	mal: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (!this.settings["mal"][toId(by)]) return this.say(con, room, '' + text + '__No MAL has been set ;-;__');
-			return this.say(con, room, text + by + '\'s MAL is ' + this.settings["mal"][toId(by)] + '!');
+			if (!this.userlog[toId(by)] || !this.userlog[toId(by)]["mal"]) return this.say(con, room, '' + text + '__No MAL has been set ;-;__');
+			return this.say(con, room, text + by + '\'s MAL is ' + this.userlog[toId(by)]["mal"] + '!');
 		}
 		var user = toId(arg);
-		if (!this.settings["mal"][user]) return this.say(con, room, '__No MAL has been set ;-;__');
-		this.say(con, room, text + arg + '\'s MAL is ' + this.settings["mal"][user] + '!');
+		if (!this.userlog[user] || !this.userlog[user]["mal"]) return this.say(con, room, '__No MAL has been set ;-;__');
+		this.say(con, room, text + arg + '\'s MAL is ' + this.userlog[user]["mal"] + '!');
 	},
 	setfaveanime: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (!this.settings["faveanime"]) this.settings["faveanime"] = {};
+		if (!this.userlog[toId(by)]) this.userlog[toId(by)] = {};
 		if (/boku no pico/.test(arg)) return this.say(con, room, 'l-lewd..!! ;~;');
-		if (!this.settings["faveanime"][toId(by)]) this.settings["faveanime"][toId(by)] = {};
-		this.settings["faveanime"][toId(by)] = arg;
-		this.writeSettings();
+		if (!this.userlog[toId(by)]["faveanime"]) this.userlog[toId(by)]["faveanime"] = {};
+		this.userlog[toId(by)]["faveanime"] = arg;
+		this.writeUserlog();
 		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + by + ', ') + '__Your favorite anime has been set!^-^__');
 	},
 	faveanime: function(arg, by, room, con) {
-		if (room !== 'animeandmanga') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (!this.settings["faveanime"]) this.settings["faveanime"] = {};
+		if (!this.userlog[toId(by)]) this.userlog[toId(by)] = {};
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
-			if (!this.settings["faveanime"][toId(by)]) return this.say(con, room, text + '__No favorite anime has been set ;-;__');
-			if (/http/.test(this.settings["faveanime"][toId(by)])) return this.say(con, room, text + by + '\'s favorite anime is ' + this.settings["faveanime"][toId(by)] + '!');
-			else return this.say(con, room, text + by + '\'s favorite anime is __' + this.settings["faveanime"][toId(by)] + '__!');
+			if (!this.userlog[toId(by)] || !this.userlog[toId(by)]["faveanime"]) return this.say(con, room, text + '__No favorite anime has been set ;-;__');
+			if (/http/.test(this.userlog[toId(by)]["faveanime"])) return this.say(con, room, text + by + '\'s favorite anime is ' + this.userlog[toId(by)]["faveanime"] + '!');
+			else return this.say(con, room, text + by + '\'s favorite anime is __' + this.userlog[toId(by)]["faveanime"] + '__!');
 		}
 		var user = toId(arg);
-		if (!this.settings["faveanime"][user]) return this.say(con, room, '__No favorite anime has been set ;-;__');
-		if (/http/.test(this.settings["faveanime"][user])) this.say(con, room, text + by + '\'s favorite anime is ' + this.settings["faveanime"][user] + '!');
-		else this.say(con, room, text + arg + '\'s favorite anime is __' + this.settings["faveanime"][user] + '__!');
+		if (!this.userlog[user] || !this.userlog[user]["faveanime"]) return this.say(con, room, '__No favorite anime has been set ;-;__');
+		if (/http/.test(this.userlog[user]["faveanime"])) this.say(con, room, text + by + '\'s favorite anime is ' + this.userlog[user]["faveanime"] + '!');
+		else this.say(con, room, text + arg + '\'s favorite anime is __' + this.userlog[user]["faveanime"] + '__!');
 	},
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1271,7 +1086,7 @@ exports.commands = {
 			else self.say(con, room, text + '**' + info.username + '** - __Games:__ ' + info["perfs"][mode]["games"] + ' | __Rating:__ ' + info["perfs"][mode]["rating"] + ' +/- ' + info["perfs"][mode]["rd"]);
 		});
 	},
-	
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// TV & Books & Films Room Commands //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
@@ -1281,24 +1096,62 @@ exports.commands = {
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
 	awards: function(arg, by, room, con) {
 		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
 	actors: 'cast',
 	cast: function(arg, by, room, con) {
@@ -1306,12 +1159,31 @@ exports.commands = {
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
 	summary: 'plot',
 	plot: function(arg, by, room, con) {
@@ -1319,36 +1191,93 @@ exports.commands = {
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
-	info: function(arg, by, room, con) {
+	info: function(arg, by, room, con) {	
 		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
 	writers: function(arg, by, room, con) {
 		if (room !== 'tvbooksfilms') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var text = '';
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		var self = this;
-		var title = arg.replace(/ /g,'+');
-		request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+		if (arg.split(", ").length == 2) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var type = arg.split(", ")[1];
+			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
-			else self.say(con, room, text + '__Incorrect movie title!__');
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		} else if (arg.split(", ").length == 3) {
+			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
+			var season = arg.split(", ")[1];
+			var episode = arg.split(", ")[2];
+			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
 		});
+		} else {
+			var title = arg.replace(/ /g,'+');
+			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			var info = JSON.parse(body);
+			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
+			else self.say(con, room, text + '__Incorrect movie/series title!__');
+			});
+		}
 	},
 	recs: 'staffrecommendations',
 	reclist: 'staffrecommendations',
@@ -1376,14 +1305,6 @@ exports.commands = {
 /// MOBA Room Commands ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
 	
-	/**
-	 * ranked is a function that outputs the user's ranked stats
-	 * 
-	 * @param {String} name   - Username that you want to get data for
-	 * @param {String} region - Region of the user that you want data for
-	 * 
-	 * @return {String}       - Returns wins and loses of a user in ranked games
-	 */
 	ranked: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
@@ -1436,14 +1357,6 @@ exports.commands = {
 			return self.say(con, room, '__This user could not be found. ;-;__');
 		}});
 	},
-	/**
-	 * unranked is a function tha toutputs the user's unranked stats
-	 * 
-	 * @param {String} name   - Username that you want to get data for
-	 * @param {String} region - Region of the user that you want data for
-	 * 
-	 * @return {String}       - Returns many stats of a user for all of the unranked games
-	 */
 	unranked: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
@@ -1482,13 +1395,6 @@ exports.commands = {
 			return self.say(con, room, '__This user could not be found. ;-;__');
 		}});
 	},
-	/**
-	 * freechamps is a function that returns the champions that are currently free in this week's rotation
-	 * 
-	 * @param {void}
-	 * 
-	 * @return {String} - Returns the free champs of the week
-	 */
 	freeweek: 'freechamps',
     freechamps: function(arg, by, room, con) {
     	if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
@@ -1571,14 +1477,6 @@ exports.commands = {
 					});
 		});
 	},
-	/**
-	 * gameinfo is a function that returns info the the game that a user is currently in
-	 * 
-	 * @param {String} name   - Username that you want to get data for
-	 * @param {String} region - The region of the user that you want to get data for
-	 * 
-	 * @return {String}       - Returns picks and bans of the game that the user is in
-	 */
 	gameinfo: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var name = toId(arg.split(", ")[0]);
@@ -1607,9 +1505,9 @@ exports.commands = {
 							}
 						}
 						if (game.participants[i]["teamId"] == 100) {
-							redChamps.push(' __' + game.participants[i]["summonerName"] + '__: **' + champName + '**');
-						} else {
 							blueChamps.push(' __' + game.participants[i]["summonerName"] + '__: **' + champName + '**');
+						} else {
+							redChamps.push(' __' + game.participants[i]["summonerName"] + '__: **' + champName + '**');
 						}
 					}
 					for (var j in game.bannedChampions) {
@@ -1620,9 +1518,9 @@ exports.commands = {
 							}
 						}
 						if (game.bannedChampions[j]["teamId"] == 100) {
-							redBans.push(' __' + champName + '__');
-						} else {
 							blueBans.push(' __' + champName + '__');
+						} else {
+							redBans.push(' __' + champName + '__');
 						}
 					}
 					self.say(con, room, 'Blue Team: (Bans)' + blueBans + '\n' + blueChamps);
@@ -1635,7 +1533,7 @@ exports.commands = {
 			}
 	});
 	},
-	history: function(arg, by, room, con) {
+/*	history: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!arg || arg.split(", ").length > 3) return this.say(con, room, '__Correct syntax:__ #history ``[summoner name], [champ name]``');
 		var self = this;
@@ -1672,18 +1570,8 @@ exports.commands = {
 			});
 		} else if (arg.split(", ").length == 3) {
 			
-		} else return this.say(con, room, '__There has been an error! ;~;__');
-	},
-	/**
-	 * champsearch is a function that searches through all champions found in an included js file
-	 * and outputs all champs that meet the criteria that is input by the user
-	 * 
-	 * @param {String} parameter - What data user wants to search through
-	 * @param {String} sign      - How the user wants to search through the data
-	 * @param {int or String}    - What value to start at for the search
-	 * 
-	 * @return {String}          - Returns any champs that meet the input criteria
-	 */
+		} else return this.say(con, room, '__Correct syntax:__ #history ``[summoner name], [champ name]``');
+	}, */
 	cs: 'champsearch',
 	champsearch: function (arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
@@ -1732,16 +1620,6 @@ exports.commands = {
 			return this.say(con, room, 'Champs meeting criteria:' + champList);
 		}
 	},
-	/**
-	 * itemsearch is a function that searches through all items found in an included js file
-	 * and outputs all items that meet the criteria that is input by the user
-	 * 
-	 * @param {String} parameter - What data user wants to search through
-	 * @param {String} sign      - How the user wants to search through the data
-	 * @param {int} value        - What value to start at for the search
-	 * 
-	 * @return {String}          - Returns any items that meet the input criteria
-	 */
 	is: 'itemsearch',
 	itemsearch: function (arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
@@ -1799,24 +1677,18 @@ exports.commands = {
 		if (itemList.length < 1) return this.say(con, room, '__No items with the criteria could be found. ;-;__');
 		else return this.say(con, room, 'Items meeting criteria:' + itemList);
 	},
-	/**
-	 * champion is a function that outputs data for a specific champion in League of legends
-	 * 
-	 * @param {String} arg - What champion to look up data for 
-	 * 
-	 * @return {String}    - Returns basic data about the specified champion
-	 */
 	champ: 'champion',
 	hero: 'champion',
 	god: 'champion',
 	champion: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
+		if (arg.split(" ").length < 2) return this.say(con, room, 'Command syntax: #champion ``[info]|[stats]|[abilities] [champ name]``');
 		var input = arg.split(" ");
 		var champName = toId(input[1]).capitalize();
 		var inChamps = false;
 		for (var i in leagueChamps.champs) {
-			if (champName == leagueChamps.champs[i]) inChamps = true;
+			if (champName == i) inChamps = true;
 		}
 		if (input[0] == 'info' || input[0] == 'overview') {
 			if (inChamps == false) return this.say(con, room, '__The champ could not be found!__');
@@ -1837,22 +1709,16 @@ exports.commands = {
 		} else return this.say(con, room, 'Command syntax: #champion ``[info]|[stats]|[abilities] [champ name]``');
 	},
 	randomchamp: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
+		 if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		var rand = Math.round(Math.random() * 124);
 		var champArray = Object.keys(leagueChamps.champs).map(function (key) {return leagueChamps.champs[key]});
 		this.say(con, room, 'Your random champ is: __' + champArray[rand]["name"] + '__');
 	},
-	/**
-	 * item is a function that outputs data for a specific item in League of Legends
-	 * 
-	 * @param {String} name - What item to look up data for
-	 * 
-	 * @return {String}     - Returns basic data about the specified item
-	 */
 	item: function(arg, by, room, con) {
 		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
 		if (!this.hasRank(by, '+%@&#~')) return false;
 		var input = arg.split(" ");
+		if (input.length < 2) return this.say(con, room, 'Command syntax: #item ``[info]|[recipe]|[efficiency] [item name]``');
 		if (input.length > 2) {
 			var newInput = '';
 			for (var i = 1; i < input.length; i++) {
@@ -1952,88 +1818,6 @@ exports.commands = {
 			this.say(con, room, '**' + leagueItems.items[itemId]["name"] + '**');
 			this.say(con, room, '__Cost:__ ' + leagueItems.items[itemId]["gold"]["total"] + ' | __Stat Value:__ ' + statValue + ' | __Gold Efficiency:__ **' + (Math.round(statValue / leagueItems.items[itemId]["gold"]["total"] * 100) + '%**'));
 		} else return this.say(con, room, 'Command syntax: #item ``[info]|[recipe]|[efficiency] [item name]``');
-	},
-	/**
-	 * trivia is a function that initiates a round of a League of Legends themed trivia game
-	 * 
-	 * @param {String} arg - Anything that is input after #trivia 
-	 * 
-	 * @return {boolean}   - Returns false if arg is "off"
-	 * @return {String}    - Returns user wins if arg is a username
-	 * @return {boolean}   - Returns true if no arg
-	 */
-	trivia: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (toId(arg) == 'off' || toId(arg) == 'end') {
-			if (!this.hasRank(by, '@&#~')) return false;
-			this.say(con, room, '__Trivia session has been aborted!__');
-			triviaActive = false;
-		} else if (arg) {
-			if (!this.scores[toId(arg)]) return this.say(con, room, '__This user has not won any games yet ;-;__');
-			if (this.scores[toId(arg)] == 1) return this.say(con, room, arg + ' has won ' + this.scores[toId(arg)] + ' game!^-^');
-			if (this.scores[toId(arg)] > 1) return this.say(con, room, arg + ' has won ' + this.scores[toId(arg)] + ' games!^-^');
-		} else {
-			if (!this.hasRank(by, '@&#~')) return false;
-			questionCounter = Math.round(Math.random() * Object.keys(Trivia).length);
-			var self = this;
-			participants.length = 0;
-			triviaActive = true;
-			this.say(con, room, '**New trivia round is now starting**, good luck everyone!^-^');
-			setTimeout(function(){self.say(con, room, '**First Question!** ' + Trivia[questionCounter].question);}, 3000);
-		}
-	},
-	setsong: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
-		if (!this.settings) this.settings = {};
-		if (!this.settings["song"]) this.settings["song"] = {};
-		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setsong ``[name], [link]``');
-		var input = arg.split(", ");
-		this.settings["song"]["name"] = input[0];
-		this.settings["song"]["link"] = input[1];
-		this.writeSettings();
-		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Song of the Day has been set!^-^__');
-	},
-	sotd: 'song',
-	song: function(arg, by, room, con) {
-		this.say(con, room, 'The Song of the Day is: __' + this.settings["song"]["name"] + '__');
-		this.say(con, room, 'Link: ' + this.settings["song"]["link"]);
-	},
-	setvideo: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
-		if (!this.settings) this.settings = {};
-		if (!this.settings["video"]) this.settings["video"] = {};
-		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setvideo ``[name], [link]``');
-		var input = arg.split(", ");
-		this.settings["video"]["name"] = input[0];
-		this.settings["video"]["link"] = input[1];
-		this.writeSettings();
-		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Video of the Day has been set!^-^__');
-	},
-	votd: 'video',
-	video: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		this.say(con, room, 'The Video of the Day is: __' + this.settings["video"]["name"] + '__');
-		this.say(con, room, 'Link: ' + this.settings["video"]["link"]);
-	},
-	setguide: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		if (toId(by) !== 'gymleaderteemo' && !this.hasRank(by, '#&~')) return false;
-		if (!this.settings) this.settings = {};
-		if (!this.settings["guide"]) this.settings["guide"] = {};
-		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + 'Command syntax: #setguide ``[name], [link]``');
-		var input = arg.split(", ");
-		this.settings["guide"]["name"] = input[0];
-		this.settings["guide"]["link"] = input[1];
-		this.writeSettings();
-		this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__The Guide of the Day has been set!^-^__');
-	},
-	gotd: 'guide',
-	guide: function(arg, by, room, con) {
-		if (room !== 'moba') return this.say(con, room, '__That command is not available in this room ;-;__');
-		this.say(con, room, 'The Guide of the Day is: __' + this.settings["guide"]["name"] + '__');
-		this.say(con, room, 'Link: ' + this.settings["guide"]["link"]);
 	},
 };
 
