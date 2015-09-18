@@ -46,6 +46,30 @@ try {
 	if (!Object.keys(scores).length && scores !== {}) scores = {};
 } catch (e) {} // file doesn't exist [yet]
 
+trades = {};
+try {
+	trades = JSON.parse(fs.readFileSync('trades.json'));
+	if (!Object.keys(trades).length && trades !== {}) trades = {};
+} catch (e) {} // file doesn't exist [yet]
+
+bannedSites = {};
+try {
+	bannedSites = JSON.parse(fs.readFileSync('bannedSites.json'));
+	if (!Object.keys(bannedSites).length && bannedSites !== {}) bannedSites = {};
+} catch (e) {} // file doesn't exist [yet]
+
+bannedWords = {};
+try {
+	bannedWords = JSON.parse(fs.readFileSync('bannedWords.json'));
+	if (!Object.keys(bannedWords).length && bannedWords !== {}) bannedWords = {};
+} catch (e) {} // file doesn't exist [yet]
+
+userlog = {};
+try {
+	userlog = JSON.parse(fs.readFileSync('userlog.json'));
+	if (!Object.keys(userlog).length && userlog !== {}) userlog = {};
+} catch (e) {} // file doesn't exist [yet]
+
 exports.parse = {
 	actionUrl: url.parse('https://play.pokemonshowdown.com/~~' + config.serverid + '/action.php'),
 	room: 'lobby',
@@ -55,6 +79,10 @@ exports.parse = {
 	'notes': notes,
 	'reminders': reminders,
 	'scores': scores,
+	'trades': trades,
+	'bannedSites': bannedSites,
+	'bannedWords': bannedWords,
+	'userlog': userlog,
 	chatData: {},
 	ranks: {},
 	msgQueue: [],
@@ -80,7 +108,6 @@ exports.parse = {
 		var spl = message.split('\n');
 		
 			if (spl[2]) {
-			//if (spl[2].substr(1, 5) === 'popup') this.say(connection, 'tha', '__authlist detected!__');
 			if (spl[2].substr(1, 10) === 'tournament') {
 				var splTour = spl[2].split('|');
 				if (/\"results\"/i.test(splTour[3])) this.say(connection, 'tha', 'Good job ' + splTour[3].substr(splTour[3].indexOf("results") + 12, splTour[3].indexOf("format") - splTour[3].indexOf("results") - 17) + ' on winning the tournament!^~^');
@@ -220,14 +247,14 @@ exports.parse = {
 			case 'c':
 				var by = spl[2];
 				spl = spl.splice(3).join('|');
-				this.processChatData(toId(by), room, connection, spl);
+				this.processChatData(by, room, connection, spl);
 				this.chatMessage(spl, by, room, connection);
 				if (toId(by) === toId(config.nick) && ' +%@#~'.indexOf(by.charAt(0)) > -1) this.ranks[room] = by.charAt(0);
 				break;
 			case 'c:':
 				var by = spl[3];
 				spl = spl.splice(4).join('|');
-				this.processChatData(toId(by), room, connection, spl);
+				this.processChatData(by, room, connection, spl);
 				this.chatMessage(spl, by, room, connection);
 				if (toId(by) === toId(config.nick) && ' +%@#~'.indexOf(by.charAt(0)) > -1) this.ranks[room] = by.charAt(0);
 				break;
@@ -239,16 +266,17 @@ exports.parse = {
 				break;
 			case 'N':
 				var by = spl[2];
-				this.updateSeen(spl[3], spl[1], toId(by));
 				if (toId(by) !== toId(config.nick) || ' +%@&#~'.indexOf(by.charAt(0)) === -1) return;
 				this.ranks[toId(this.room === '' ? 'lobby' : this.room)] = by.charAt(0);
 				this.room = '';
 				break;
 			case 'J': case 'j':
 				var by = spl[2];
-				this.updateSeen(by, spl[1], (this.room === '' ? 'lobby' : this.room));
 				if (toId(by) === toId(config.nick) && ' +%@&#~'.indexOf(by.charAt(0)) > -1) this.ranks[room] = by.charAt(0);
-			
+
+// Blacklist User Autoban
+				if (this.userlog && this.userlog[toId(by)] && this.userlog[toId(by)]["bl"] === true) this.say(connection, room, '/rb ' + toId(by) + ', Blacklisted user ;-;');
+				
 // Friends comes online notification
 				for (var i in this.friends) {
 					for (var j in this.friends[i]) {
@@ -272,7 +300,6 @@ exports.parse = {
 				break;
 			case 'l': case 'L':
 				var by = spl[2];
-				this.updateSeen(by, spl[1], (this.room === '' ? 'lobby' : this.room));
 				this.room = '';
 				
 // Friends goes offline notification
@@ -291,7 +318,7 @@ exports.parse = {
 		var now = Date.now();
 		var cmdrMessage = '["' + room + '|' + by + '|' + message + '"]';
 		message = message.trim();
-		// auto accept invitations to rooms
+		// Auto accept invitations to rooms
 		if (room.charAt(0) === ',' && message.substr(0,8) === '/invite ' && this.hasRank(by, '#&~') && !(config.serverid === 'showdown' && toId(message.substr(8)) === 'lobby')) {
 			this.say(connection, '', '/join ' + message.substr(8));
 		}
@@ -380,22 +407,17 @@ exports.parse = {
 	},
 	processChatData: function(user, room, connection, msg) {
 		var botName = msg.toLowerCase().indexOf(toId(config.nick));
-		
 		if (toId(user.substr(1)) === toId(config.nick)) {
 			this.ranks[room] = user.charAt(0);
 			return;
 		}
-		
 		var by = user;
-//		console.log(by);
 		user = toId(user);
-//		console.log(user);
 		
 		if (!user || room.charAt(0) === ',') return;
 		room = toId(room);
 		msg = msg.trim().replace(/[ \u0000\u200B-\u200F]+/g, ' '); // removes extra spaces and null characters so messages that should trigger stretching do so
 		
-		this.updateSeen(user, 'c', room);
 		var now = Date.now();
 		if (!this.chatData[user]) this.chatData[user] = {zeroTol: 0, lastSeen: '', seenAt: now};
 		
@@ -411,40 +433,18 @@ exports.parse = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		//Greetings & Farewells
-//		if (/(good)? ?(night|nite) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
-//		else if (/i(\'?m| am).*go.*to (bed|sleep)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Goodnight ' + by + '^-^');
-//		else if (/(\bhey\b|hi|hello|ha+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Haaii ' + by + '^-^');
-//		else if (/(bye|g2g|ba+?i+) (everyone|guys|friends|all)/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
-//		else if (/g2g/i.test(msg) && toId(config.nick) !== toId(by)) this.say(connection, room, 'Baaii ' + by + '~');
 		if (/how(\'re)? (r|are|is) (u|you|chu)? mash(i|y|iro)?bot??/i.test(msg)) this.say(connection, room, 'I am good, how are you ' + by + '? :o');
 		else if (/(hi|hey|ha+?i+|hello) mash(i|y|iro)?bot/i.test(msg)) this.say(connection, room, 'Haaii ' + by + '!^-^');
 		
 		//Miscellaneous
 		else if (/(why are there )?so many bots( in here)?\??/i.test(msg)) this.say(connection, room, 'Sorry if I\'m intruding, I\'ll try and be as quiet as possible! >~<');
 		else if (/(mashi(ro)?|mashy)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
-//		else if (/I(\'?m| am) back/i.test(msg)) this.say(connection, room, 'Hi back, I am MashiBot o3o');
-//		else if (/I(\'?m| am) tired/i.test(msg)) this.say(connection, room, 'Hi tired, I am MashiBot o3o');
-//		else if (/I(\'?m| am) hungry/i.test(msg)) this.say(connection, room, 'Hi hungry, I am MashiBot o3o');
-		else if (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? ?mash(y|iro)?/i.test(msg)) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
 
-//		if (/(rekt|burn)/i.test(msg)) this.say(connection, room, '!data Rawst Berry');
+		else if ((/^\/me/i.test(msg)) && (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? ?mash(y|iro)/i.test(msg))) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
 		
 		//Favorite Pokemon
 		else if (/what(\'s| is)? ?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
-		
-		//League Names
-//		if (/(does)? ?(some|any)(one|1|body) (here)? ?play (league( of legends)?|lol)/i.test(msg)) this.say(connection, room, 'Add Mashiro-chan on League if you want to play: LeInfiniti');
-		
-		//osu! room
-		if (/(pronounce|say) osu/i.test(msg)) {
-		if (room !== 'osu') return false;
-		this.say(connection, room, 'osu! is pronounced like \"os\", not \"osu\". This is because when a \'u\' follows an \'s\' in Japanese, the \'u\' is silent.');
-		}
-		if (/what(\'s| is)? osu/i.test(msg)) {
-		if (room !== 'osu') return false;
-		this.say(connection, room, 'osu! is a Japanese rhythm game where the player hits notes in time with the beat of the music. There are 5 different game modes, the most popular being standard osu! and osu! mania.');
-		}
-		
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////// Reminder Regex ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		
@@ -473,9 +473,15 @@ exports.parse = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////// YouTube Links /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		
-		if (/youtube\.com/i.test(msg)) {
-			var id = msg.substring(msg.indexOf("=") + 1);
+/*		
+		if (/youtube\.com\/watch\?/i.test(msg)) {
+			if (!this.settings.youtube) this.settings.youtube = false;
+			this.writeSettings();
+			if (this.settings.youtube == false) return false;
+			if (room === 'techcode') return false;
+			var id = '';
+			if (msg.indexOf("&") > msg.indexOf("v=") + 4) id += msg.substring(msg.indexOf("v=") + 2, msg.indexOf("&"));
+			else id += msg.substring(msg.indexOf("v=") + 2);
 			var self = this;
 			var options = {
   				host: 'www.googleapis.com',
@@ -487,17 +493,30 @@ exports.parse = {
     			str += chunk;
   			});
   			response.on('end', function () {
-    			self.say(connection, room, '__"' + str.substring(str.indexOf("title") + 9, str.indexOf("categoryId") - 8) + '"__');
+  				var info = JSON.parse(str);
+  				var videoTitle = info.items[0].snippet.title;
+  				var bannedLink = false;
+  				for (var i in self.bannedSites["sites"]) {
+  					if (toId(videoTitle).indexOf(toId(self.bannedSites["sites"][i])) > -1) bannedLink = true;
+  				}
+  				if (bannedLink == true) {
+  					if(!self.bannedSites["users"]) self.bannedSites["users"] = [];
+  					self.bannedSites["users"].push([by, room, videoTitle]);
+  					self.writeBannedSites();
+  					console.log(videoTitle);
+    				console.log(by + ' - ' + room);
+  					self.say(connection, room, '__Your YouTube link contains a banned phrase! ;~;__');
+  				} else self.say(connection, room, by + '\'s Link: __"' + videoTitle + '"__');
   			});
 			};
 			https.request(options, callback).end();
 		}
-		
+*/	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////// /me Regex /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
-		if (botName > -1 && toId(by) !== toId(config.nick)) {
+		if (botName > -1 && toId(by) !== toId(config.nick) && toId(by) !== 'cellgoondude') {
 			if (/^\/me/i.test(msg)) {
 				if (/(pet|stroke)s?/i.test(msg)) {
 					this.say(connection, room, '/me purrs~'); 
@@ -550,92 +569,118 @@ exports.parse = {
 		}
 		
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Trivia ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        		
-		
-		if (triviaActive == true) {
-			var self = this;
-			if (toId(msg) == toId(Trivia[questionCounter].answer)) {
-				if (!participants[toId(by)]) participants[toId(by)] = 1;
-				else participants[toId(by)]++;
-				this.say(connection, room, '**' + by + '** has gotten the answer correct! Points: ' + participants[toId(by)]);
-				questionCounter = Math.round(Math.random() * Object.keys(Trivia).length);
-				if (participants[toId(by)] == 3) {
-					var winner = by;
-					setTimeout(function(){self.say(connection, room, 'Congratulations **' + winner + '** on winning this trivia session!^-^');}, 2000);
-					triviaActive = false;
-					participants.length = 0;
-					if (!this.scores[toId(by)]) this.scores[toId(by)] = 1;
-					else this.scores[toId(by)] += 1;
-					this.writeScores();
-				} else setTimeout(function(){self.say(connection, room, '**Next Question:** ' + Trivia[questionCounter].question);}, 5000);
-			}
-		}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Moderation ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        		
 		
-		if (/8=+D/i.test(msg)) this.say(connection, room, '/m ' + toId(by) + ', l-lewd..!! ;///;');
-		if (config.allowmute && this.hasRank(this.ranks[room] || ' ', '%@&#~') && config.whitelist.indexOf(user) === -1) {
-			var useDefault = !(this.settings['modding'] && this.settings['modding'][room]);
-			var pointVal = 0;
-			var warnMessage = '';
-			// moderation for banned words
-			if (useDefault || this.settings['modding'][room]['bannedwords'] !== 0 && pointVal < 2) {
-				var bannedPhrases = !!this.settings.bannedphrases ? (Object.keys(this.settings.bannedphrases[room] || {})).concat(Object.keys(this.settings.bannedphrases['global'] || {})) : [];
-				for (var i = 0; i < bannedPhrases.length; i++) {
-					if (msg.toLowerCase().indexOf(bannedPhrases[i]) > -1) {
-						pointVal = 2;
-						this.say(connection, room, '/mute ' + user + ', please don\'t say that! ;w;');
-						break;
-					}
-				}
+		if (!this.userlog) this.userlog = {};
+		if (!this.userlog[user]) this.userlog[user] = {};
+		var offense = false;
+		var rule = '';
+		var rule2 = '';
+		
+		// Banned Phrases Moderation
+		for (var i in this.bannedWords["words"]) {
+			var word = "\\b(" + this.bannedWords["words"][i] + ")\\b";
+			var reg = new RegExp(word, "g");
+			if (reg.test(msg) && config.whitelist.indexOf(user) === -1) {
+			offense = true;
+			rule = 'say that';
+			rule2 = 'Banned Phrase';
 			}
-			// moderation for flooding (more than x lines in y seconds)
-/*			var isFlooding = (this.chatData[user][room].times.length >= FLOOD_MESSAGE_NUM && (now - this.chatData[user][room].times[this.chatData[user][room].times.length - FLOOD_MESSAGE_NUM]) < FLOOD_MESSAGE_TIME
-				&& (now - this.chatData[user][room].times[this.chatData[user][room].times.length - FLOOD_MESSAGE_NUM]) > (FLOOD_PER_MSG_MIN * FLOOD_MESSAGE_NUM));
-			if ((useDefault || this.settings['modding'][room]['flooding'] !== 0) && isFlooding) {
-				if (user === config.nick) {
-					return;
-				} else {
-					this.say(connection, room, '__' + user + ', please don\'t flood the chat ;~;__');
-				}
-			} */
-			// moderation for caps (over x% of the letters in a line of y characters are capital)
-//			var capsMatch = msg.replace(/[^A-Za-z]/g, '').match(/[A-Z]/g);
-//			if ((useDefault || this.settings['modding'][room]['caps'] !== 0) && capsMatch && toId(msg).length > MIN_CAPS_LENGTH && (capsMatch.length >= Math.floor(toId(msg).length * MIN_CAPS_PROPORTION))) {
-//				this.say(connection, room, '__' + user + ', p-please stop yelling..!! >~<__');
-//			}
-//			// moderation for stretching (over x consecutive characters in the message are the same)
-//			var stretchMatch = msg.toLowerCase().match(/(.)\1{7,}/g) || msg.toLowerCase().match(/(..+)\1{4,}/g); // matches the same character (or group of characters) 8 (or 5) or more times in a row
-//			if ((useDefault || this.settings['modding'][room]['stretching'] !== 0) && stretchMatch) {
-//				this.say(connection, room, '__' + by + ', this isn\'t yoga, no stretching please ._.__');
-//			}
-
-		/*	if (pointVal > 0 && !(now - this.chatData[user][room].lastAction < ACTION_COOLDOWN)) {
-				var cmd = '__';
-				// defaults to the next punishment in config.punishVals instead of repeating the same action (so a second warn-worthy
-				// offence would result in a mute instead of a warn, and the third an hourmute, etc)
-				if (this.chatData[user][room].points >= pointVal && pointVal < 4) {
-					this.chatData[user][room].points++;
-					cmd = config.punishvals[this.chatData[user][room].points] || cmd;
-				} else { // if the action hasn't been done before (is worth more points) it will be the one picked
-					cmd = config.punishvals[pointVal] || cmd;
-					this.chatData[user][room].points = pointVal; // next action will be one level higher than this one (in most cases)
-				}
-				if (config.privaterooms.indexOf(room) >= 0 && cmd === 'warn') cmd = '__'; // can't warn in private rooms
-				// if the bot has % and not @, it will default to hourmuting as its highest level of punishment instead of roombanning
-				if (this.chatData[user][room].points >= 4 && !this.hasRank(this.ranks[room] || ' ', '@&#~')) cmd = 'hourmute';
-				if (this.chatData[user].zeroTol > 4) { // if zero tolerance users break a rule they get an instant roomban or hourmute
-					warnMessage = ', Automated response: zero tolerance user';
-					cmd = this.hasRank(this.ranks[room] || ' ', '@&#~') ? 'roomban' : 'hourmute';
-				}
-				if (this.chatData[user][room].points >= 2) this.chatData[user].zeroTol++; // getting muted or higher increases your zero tolerance level (warns do not)
-				this.chatData[user][room].lastAction = now;
-				this.say(connection, room, cmd + user + warnMessage);
+		}
+		
+		// Caps Moderation
+		var capsMatch = msg.replace(/[^A-Za-z]/g, '').match(/[A-Z]/g);
+		if (capsMatch && toId(msg).length > MIN_CAPS_LENGTH && (capsMatch.length >= Math.floor(toId(msg).length * MIN_CAPS_PROPORTION)) && config.whitelist.indexOf(user) === -1) {
+			offense = true;
+			rule = 'use so much caps';
+			rule2 = 'Caps';
+		}
+		
+		// Stretching Moderation
+		var stretchMatch = msg.toLowerCase().match(/(.)\1{7,}/g) || msg.toLowerCase().match(/(..+)\1{4,}/g);
+		if (stretchMatch && config.whitelist.indexOf(user) === -1) {
+			offense = true;
+			rule = 'stretch';
+			rule2 = 'Stretching';
+		}
+		
+		// Flooding Moderation
+		var d = new Date();
+		if (!this.userlog[user]["firstMessage"]) {
+			this.userlog[user]["firstMessage"] = d.getTime();
+			this.userlog[user]["messageCount"] = 1;
+		}
+		if (d.getTime() - this.userlog[user]["firstMessage"]  < (6 * 1000)) {
+			this.userlog[user]["messageCount"]++;
+			if (this.userlog[user]["messageCount"] >= 6) {
+				offense = true;
+				rule = 'flood the chat';
+				rule2 = 'Flooding';
+				if (!this.userlog[user]["points"]) this.userlog[user]["points"] = 0;
+				this.userlog[user]["points"]++;
 			}
-		*/}
+		} else {
+			delete this.userlog[user]["firstMessage"];
+			delete this.userlog[user]["messageCount"];
+		}
+		
+		// Bot Commands Moderation
+		var d = new Date();
+		if (msg.charAt(0) == '#') {
+			if (!this.userlog[user]["firstCommand"]) {
+				this.userlog[user]["firstCommand"] = d.getTime();
+				this.userlog[user]["commandCount"] = 1;
+			}
+			if (d.getTime() - this.userlog[user]["firstCommand"]  < (180000)) {
+				this.userlog[user]["commandCount"]++;
+				if (this.userlog[user]["commandCount"] >= 6) {
+					offense = true;
+					rule = 'use so many commands';
+					rule2 = 'Spamming Commands';
+					if (!this.userlog[user]["points"]) this.userlog[user]["points"] = 0;
+					delete this.userlog[user]["firstCommand"];
+					delete this.userlog[user]["commandCount"];
+					this.userlog[user]["points"]++;
+				}
+			} else {
+				delete this.userlog[user]["firstCommand"];
+				delete this.userlog[user]["commandCount"];
+			}
+		}
+		
+		// Points / Cooldown
+		if (offense == true) {
+			if (!this.userlog) this.userlog = {};
+				if (!this.userlog[user]) this.userlog[user] = {};
+				if (!this.userlog[user]["points"]) this.userlog[user]["points"] = 0;
+				d = new Date();
+				if (this.userlog[user]["lastOffense"] && (d.getTime() - this.userlog[user]["lastOffense"] > (2 * 86400000))) { // After two days, a user will start to lose points
+					this.userlog[user]["points"] -= Math.floor(((d.getTime() - this.userlog[user]["lastOffense"]) / (2 * 86400000))); // Users lose one point every two days
+					if (this.userlog[user]["points"] < 0) this.userlog[user]["points"] = 0;
+				}
+				this.userlog[user]["points"]++;
+				this.userlog[user]["lastOffense"] = d.getTime();
+				if (this.userlog[user]["points"] == 1 || this.userlog[user]["points"] == 2) {
+					this.say(connection, room, '/k ' + user + ', Please do not ' + rule + '!');
+					if (!this.userlog[user]["warns"]) this.userlog[user]["warns"] = 1;
+					else this.userlog[user]["warns"]++;
+				} else if (this.userlog[user]["points"] == 3) {
+					this.say(connection, room, '/m ' + user + ', You\'ve been warned twice already.. ;~; (' + rule2 + ')');
+					if (!this.userlog[user]["mutes"]) this.userlog[user]["mutes"] = 1;
+					else this.userlog[user]["mutes"]++;
+				} else if (this.userlog[user]["points"] == 4) {
+					this.say(connection, room, '/hm ' + user + ', How any times do I have to tell you ;-; (' + rule2 + ')');
+					if (!this.userlog[user]["mutes"]) this.userlog[user]["mutes"] = 1;
+					else this.userlog[user]["mutes"]++;
+				} else if (this.userlog[user]["points"] == 5) {
+					this.say(connection, room, '/rb ' + user + ', rip ;-; (' + rule2 + ')');
+					if (!this.userlog[user]["bans"]) this.userlog[user]["bans"] = 1;
+					else this.userlog[user]["bans"]++;
+					this.userlog[user]["points"] = 0;
+				}
+				this.writeUserlog();
+		}
 	},	
 	cleanChatData: function() {
 		
@@ -662,39 +707,6 @@ exports.parse = {
 				if (roomData.points > 0 && roomData.points < 4) roomData.points--;
 			}
 		}
-	},
-	updateSeen: function(user, type, detail) {
-		if (type !== 'n' && config.rooms.indexOf(detail) === -1 || config.privaterooms.indexOf(toId(detail)) > -1) return;
-		var now = Date.now();
-		if (!this.chatData[user]) this.chatData[user] = {
-			zeroTol: 0,
-			lastSeen: '',
-			seenAt: now
-		};
-		if (!detail) return;
-		var userData = this.chatData[user];
-		var msg = '';
-		switch (type) {
-		case 'j':
-		case 'J':
-			msg += 'joining ';
-			break;
-		case 'l':
-		case 'L':
-			msg += 'leaving ';
-			break;
-		case 'c':
-		case 'c:':
-			msg += 'chatting in ';
-			break;
-		case 'N':
-			msg += 'changing nick to ';
-			if (detail.charAt(0) !== ' ') detail = detail.substr(1);
-			break;
-		}
-		msg += detail.trim() + '.';
-		userData.lastSeen = msg;
-		userData.seenAt = now;
 	},
 	getTimeAgo: function(time) {
 		time = ~~((Date.now() - time) / 1000);
@@ -894,6 +906,130 @@ exports.parse = {
 					if (err) {
 						// This should only happen on Windows.
 						fs.writeFile('messages.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeTrades: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeTrades();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+
+			}
+			writing = true;
+			var data = JSON.stringify(this.trades);
+			fs.writeFile('trades.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('trades.json.0', 'trades.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('trades.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeBannedSites: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeBannedSites();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+
+			}
+			writing = true;
+			var data = JSON.stringify(this.bannedSites);
+			fs.writeFile('bannedSites.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('bannedSites.json.0', 'bannedSites.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('bannedSites.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeBannedWords: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeBannedWords();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+
+			}
+			writing = true;
+			var data = JSON.stringify(this.bannedWords);
+			fs.writeFile('bannedWords.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('bannedWords.json.0', 'bannedWords.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('bannedWords.json', data, finishWriting);
+						return;
+					}
+					finishWriting();
+				});
+			});
+		};
+	})(),
+	writeUserlog: (function() {
+		var writing = false;
+		var writePending = false; // whether or not a new write is pending
+		var finishWriting = function() {
+			writing = false;
+			if (writePending) {
+				writePending = false;
+				this.writeUserlog();
+			}
+		};
+		return function() {
+			if (writing) {
+				writePending = true;
+				return;
+
+			}
+			writing = true;
+			var data = JSON.stringify(this.userlog);
+			fs.writeFile('userlog.json.0', data, function() {
+				// rename is atomic on POSIX, but will throw an error on Windows
+				fs.rename('userlog.json.0', 'userlog.json', function(err) {
+					if (err) {
+						// This should only happen on Windows.
+						fs.writeFile('userlog.json', data, finishWriting);
 						return;
 					}
 					finishWriting();
