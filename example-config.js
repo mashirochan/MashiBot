@@ -27,6 +27,7 @@ exports.rooms = ['room'];
 // Any private rooms that should be joined.
 // Private rooms will be moderated differently (since /warn doesn't work in them).
 // The bot will also avoid leaking the private rooms through .seen
+// If you want to join a groupchat, the syntax is 'groupchat-[creator]-[roomname]', ex: 'groupchat-mashibot-mashisroom'
 exports.privaterooms = ['privateroom'];
 
 // The character text should start with to be seen as a command.
@@ -100,5 +101,4 @@ exports.punishvals = {
 	5: 'ban'
 };
 
-//This key is used to deliver requests from Google Spreadsheets. Used by the wifi room.
-exports.googleapikey = '';
+// This section of the config file has been hidden by Mashiro-chan
