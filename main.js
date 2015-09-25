@@ -53,21 +53,6 @@ global.toId = function(text) {
 	return text.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-global.toProperEnglish = function(msg) {
-	return msg.replace(/\bhim\b/ig, "you").replace(/\bher\b/ig, "you").replace(/\bshe\'s\b/ig, "you\'re").replace(/\bhe\'s\b/ig, "you\'re").replace(/\bhis\b/ig, "your").replace(/\bhe\b/ig, "you").replace(/\bneeds\b/ig, "need");
-};
-
-global.toAttackSpeed = function(number) {
-	return (0.625 / (1 + number)).toFixed(3);
-};
-
-global.getItemId = function(itemName) {
-	for (var i in leagueItems.items) {
-		if (toId(leagueItems.items[i]["name"]) == itemName) return leagueItems.items[i]["id"];
-	}
-	return false;
-};
-
 global.stripCommands = function(text) {
 	text = text.trim();
 	switch (text.charAt(0)) {
