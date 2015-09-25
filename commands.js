@@ -97,7 +97,7 @@ exports.commands = {
 		if (toId(by) !== 'mashirochan') return false;
 		if (arg.indexOf(", ") == -1) return this.say(con, room, (room.charAt(0) === ',' ? '' : '/pm ' + toId(by) + ', ') + '__No room has been specified!__');
 		var input = arg.split(", ");
-		var tarRoom = toId(input[0]);
+		var tarRoom = input[0];
 		var message = input[1];
 		this.say(con, tarRoom, message);
 	},
@@ -132,6 +132,10 @@ exports.commands = {
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		this.say(con, room, text + 'Mashiro-chan\'s Twitch stream can be found at: twitch.tv/leinfiniti');
 	},
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// These commands have been hidden! //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Moderation commands ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
@@ -739,12 +743,12 @@ exports.commands = {
 		if (!this.hasRank(by, '+%@#&~')) text += ('/w ' + toId(by) + ', ');
 		if (!arg) {
 			if (!this.userlog[toId(by)]["favemon"]) return this.say(con, room, 'You have not set your favorite Pokemon.');
-			return this.say(con, room, by + '\'s favorite Pokemon is __' + userlog[toId(by)]["favemon"] + '__!');
+			return this.say(con, room, by + '\'s favorite Pokemon is __' + this.userlog[toId(by)]["favemon"] + '__!');
 		}
 		var user = toId(arg);
 		if (user.length < 1 || user.length > 18) return this.say(con, room, 'That\'s not a real username!');
 		if (!this.userlog[toId(by)]["favemon"]) return this.say(con, room, text + 'There is no favorite Pokemon set for ' + arg + '.');
-		this.say(con, room, text + arg + '\'s favorite Pokemon is __' + userlog[toId(by)]["favemon"] + '__!');
+		this.say(con, room, text + arg + '\'s favorite Pokemon is __' + this.userlog[toId(by)]["favemon"] + '__!');
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -836,6 +840,14 @@ exports.commands = {
 		else user = toId(arg);
 		if (!this.userlog) return this.userlog = {};
 		if (!this.userlog[user]) this.userlog[user] = {};
+		var rank;
+		if (!this.userlog[user]["rank"]) rank = '';
+		else {
+			if (user == 'mashirochan') rank = '#';
+			else if (this.userlog[user]["rank"] == 'voice') rank = '+';
+			else if (this.userlog[user]["rank"] == 'driver') rank = '%';
+			else if (this.userlog[user]["rank"] == 'mod') rank = '@';
+		}
 		var favemon;
 		if (!this.userlog[user]["favemon"]) favemon = 'Not set yet!';
 		else favemon = this.userlog[user]["favemon"];
@@ -849,46 +861,49 @@ exports.commands = {
 	    if (this.userlog[user]["selfie"]) selfie = '\n\nSelfie: ' + this.userlog[user]["selfie"];
 	    var self = this;
 		request('http://pokemonshowdown.com/users/' + user + '.json', function(err, response, body) {
-			var info = JSON.parse(body);
-			var regTime = new Date(1000 * info.registertime);
-			var year = regTime.getFullYear();
-			var monthInt = regTime.getMonth() + 1;
-			var day = regTime.getDate();
-			var month = '';
-			if (monthInt === 1) month = 'January';
-			else if (monthInt === 2) month = 'February';
-			else if (monthInt === 3) month = 'March';
-			else if (monthInt === 4) month = 'April';
-			else if (monthInt === 5) month = 'May';
-			else if (monthInt === 6) month = 'June';
-			else if (monthInt === 7) month = 'July';
-			else if (monthInt === 8) month = 'August';
-			else if (monthInt === 9) month = 'September';
-			else if (monthInt === 10) month = 'October';
-			else if (monthInt === 11) month = 'November';
-			else if (monthInt === 12) month = 'December';
-			var suffix = '';
-			if (day % 10 === 0 || day % 10 === 4 || day % 10 === 5 || day % 10 === 6 || day % 10 === 7 || day % 10 === 8 || day % 10 === 9) suffix = 'th';
-			if (day % 10 === 1) suffix = 'st';
-			if (day % 10 === 2) suffix = 'nd';
-			if (day % 10 === 3) suffix = 'rd';
-			var date = month + ' ' + day + suffix + ', ' + year;
-			var rankedLaddersTitle = '//////////////////////////////////////////////////\n/// Ranked Ladders ///////////////////////////////\n//////////////////////////////////////////////////';
-			var faveMonTitle = '//////////////////////////////////////////////////\n/// Favorite Pokemon /////////////////////////////\n//////////////////////////////////////////////////';
-			var batRatings = '';
-			if (Object.keys(info.ratings).length === 0) {
-				batRatings = 'This user is not ranked in any ladders!\n\n';
-			} else {
-				for (var i in info.ratings) {
-					var dashes = '';
-					for (var j = 51 - (4 + i.length); j > 0; j--) dashes += '-';
-					batRatings += ('- ' + i + ' ' + dashes + '\n\nelo: ' + Math.round(info.ratings[i].elo) + '\ngxe: ' + Math.round(info.ratings[i].gxe) + '\n\n');
+			if (!err) {
+				var info = JSON.parse(body);
+				var regTime = new Date(1000 * info.registertime);
+				var year = regTime.getFullYear();
+				var monthInt = regTime.getMonth() + 1;
+				var day = regTime.getDate();
+				var month = '';
+				if (monthInt === 1) month = 'January';
+				else if (monthInt === 2) month = 'February';
+				else if (monthInt === 3) month = 'March';
+				else if (monthInt === 4) month = 'April';
+				else if (monthInt === 5) month = 'May';
+				else if (monthInt === 6) month = 'June';
+				else if (monthInt === 7) month = 'July';
+				else if (monthInt === 8) month = 'August';
+				else if (monthInt === 9) month = 'September';
+				else if (monthInt === 10) month = 'October';
+				else if (monthInt === 11) month = 'November';
+				else if (monthInt === 12) month = 'December';
+				var suffix = '';
+				if (day % 10 === 0 || day % 10 === 4 || day % 10 === 5 || day % 10 === 6 || day % 10 === 7 || day % 10 === 8 || day % 10 === 9) suffix = 'th';
+				if (day % 10 === 1) suffix = 'st';
+				if (day % 10 === 2) suffix = 'nd';
+				if (day % 10 === 3) suffix = 'rd';
+				var date = month + ' ' + day + suffix + ', ' + year;
+				var rankedLaddersTitle = '//////////////////////////////////////////////////\n/// Ranked Ladders ///////////////////////////////\n//////////////////////////////////////////////////';
+				var faveMonTitle = '//////////////////////////////////////////////////\n/// Favorite Pokemon /////////////////////////////\n//////////////////////////////////////////////////';
+				var batRatings = '';
+				if (Object.keys(info.ratings).length === 0) {
+					batRatings = 'This user is not ranked in any ladders!\n\n';
+				} else {
+					for (var i in info.ratings) {
+						var dashes = '';
+						for (var j = 51 - (4 + i.length); j > 0; j--) dashes += '-';
+						batRatings += ('- ' + i + ' ' + dashes + '\n\nelo: ' + Math.round(info.ratings[i].elo) + '\ngxe: ' + Math.round(info.ratings[i].gxe) + '\n\n');
+					}
 				}
-			}
-			var slashes = '';
-			for (var k = 50 - (5 + info.username.length); k > 0; k--) slashes += '/';
-			self.uploadToHastebin(con, room, by, '/// ' + info.username + ' ' + slashes + '\n\nRegister Date: ' + date + selfie + '\n\n' + rankedLaddersTitle + '\n\n' + batRatings + faveMonTitle + '\n\n' + favemon + faveanime + mal + favemap);
-		});
+				var slashes = '';
+				for (var k = 50 - (6 + info.username.length); k > 0; k--) slashes += '/';
+				self.uploadToHastebin(con, room, by, '/// ' + rank + info.username + ' ' + slashes + '\n\nRegister Date: ' + date + selfie + '\n\n' + rankedLaddersTitle + '\n\n' + batRatings + faveMonTitle + '\n\n' + favemon + faveanime + mal + favemap);
+			} else {
+				return self.say(con, room, '__There has been an error!__');
+			}});
 	},
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1100,26 +1115,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Metascore:__ ' + info.Metascore + ' | __IMDb Rating:__ ' + info.imdbRating);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	awards: function(arg, by, room, con) {
@@ -1131,26 +1149,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Awards:__ ' + info.Awards);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	actors: 'cast',
@@ -1163,26 +1184,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Director(s):__ ' + info.Director + ' | __Actors:__ ' + info.Actors);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	summary: 'plot',
@@ -1195,26 +1219,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Plot:__ ' + info.Plot);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	info: function(arg, by, room, con) {	
@@ -1226,26 +1253,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Released:__ ' + info.Year + ' | __Rated:__ ' + info.Rated + ' | __Genres:__ ' + info.Genre + ' | __Runtime:__ ' + info.Runtime);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	writers: function(arg, by, room, con) {
@@ -1257,26 +1287,29 @@ exports.commands = {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var type = arg.split(", ")[1];
 			request('http://www.omdbapi.com/?t=' + title + '&type=' + type + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		} else if (arg.split(", ").length == 3) {
 			var title = arg.split(", ")[0].replace(/ /g, '+').replace(':', '');
 			var season = arg.split(", ")[1];
 			var episode = arg.split(", ")[2];
 			request('http://www.omdbapi.com/?t=' + title + '&Season=' + season + '&Episode=' + episode + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-		});
+		}});
 		} else {
 			var title = arg.replace(/ /g,'+');
 			request('http://www.omdbapi.com/?t=' + title + '&y=&plot=short&r=json', function(err, response, body) {
+			if (!err) {
 			var info = JSON.parse(body);
 			if (info.Response !== 'False') self.say(con, room, text + '**' + info.Title + '** - __Writers:__ ' + info.Writer);
 			else self.say(con, room, text + '__Incorrect movie/series title!__');
-			});
+			}});
 		}
 	},
 	recs: 'staffrecommendations',
@@ -1820,20 +1853,3 @@ exports.commands = {
 		} else return this.say(con, room, 'Command syntax: #item ``[info]|[recipe]|[efficiency] [item name]``');
 	},
 };
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Changelog /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       	
-/*
-5-7-2015	
-Mashiro-chan: 
--Got #champsearch up and running!
--Added checks for #champsearch input
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-5-8-2015    
-Mashiro-chan: 
--Added new parameters to #champsearch as well as new vaules
--Added additional checks for new #champsearch parameters and values
--Begin work on leagueItems.js formatting
-*/
