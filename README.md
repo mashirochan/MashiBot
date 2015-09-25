@@ -5,11 +5,7 @@ A bot for Pokemon Showdown using code from both boTTT and Art2D2, as well as som
 ###### These are required in order to use the APIs!
 *Note: If you don't know what these are, then skip this part for now*
 
-League API: ```npm install leagueapi```
-
 bit.ly API: ```npm install node-bitlyapi```
-
-osu! API: ```npm install osu-api```
 
 request API: ```npm install request```
 
