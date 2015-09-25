@@ -425,8 +425,6 @@ exports.parse = {
 		
 		//Miscellaneous
 		else if (/(why are there )?so many bots( in here)?\??/i.test(msg)) this.say(connection, room, 'Sorry if I\'m intruding, I\'ll try and be as quiet as possible! >~<');
-		else if (/(mashi(ro)?|mashy)/i.test(msg) && isAfk == true) this.say(connection, room, '/w ' + by + ', Mashiro-chan is AFK right now, leave a PM or check back in a bit, thanks^-^');
-
 		else if ((/^\/me/i.test(msg)) && (/(cut|kick|punch(es)?|hit|hurt|slap|stab)s? ?mash(y|iro)/i.test(msg))) this.say(connection, room, 'D-don\'t hurt my creator..!! >~<');
 		
 		//Favorite Pokemon
