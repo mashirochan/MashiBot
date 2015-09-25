@@ -180,19 +180,19 @@ if (config.watchconfig) {
 	});
 }
 
-global.isAfk = false;
-global.hasNum = /\d/g;
-global.leagueItems = require('./leagueItems.js').leagueItems;
-global.leagueChamps = require('./leagueChamps.js').leagueChamps;
-global.Pokedex = require('./pokedex.js').pokedex;
-
-
 // And now comes the real stuff...
 info('starting server');
 
 var WebSocketClient = require('websocket').client;
 global.Commands = require('./commands.js').commands;
 global.Parse = require('./parser.js').parse;
+
+try {
+	Object.merge(Commands, require('./battle/battle.js').commands);
+}
+catch (e) {
+	error("Could not import commands file: BattleEngine | " + sys.inspect(e));
+}
 
 var connect = function(retry) {
 	if (retry) {
