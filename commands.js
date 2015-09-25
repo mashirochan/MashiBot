@@ -79,18 +79,6 @@ exports.commands = {
 		if (!this.hasRank(by, '~')) return false;
 		con.close();
 	},
-	afk: function(arg, by, room, con) {
-		var tarRoom = room;
-		if (toId(by) !== 'mashirochan') return false;
-		if (isAfk === false) {
-			isAfk = true;
-			this.say(con, room, '/w ' + by + ', you are now in AFK mode.');
-		}
-		else if (isAfk === true) {
-			isAfk = false;
-			this.say(con, room, '/w ' + by + ', AFK mode turned off.');
-		}
-	},
 	custom: 'say',
 	say: function(arg, by, room, con) {
 		if (toId(by) !== 'mashirochan') return false;
