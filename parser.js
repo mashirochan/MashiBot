@@ -2,6 +2,7 @@
 var sys = require('sys');
 var https = require('https');
 var url = require('url');
+var Battle = require('./battle/battle.js').battleParser;
 
 const ACTION_COOLDOWN = 3*1000;
 const FLOOD_MESSAGE_NUM = 5;
@@ -9,6 +10,10 @@ const FLOOD_PER_MSG_MIN = 500;
 const FLOOD_MESSAGE_TIME = 6*1000;
 const MIN_CAPS_LENGTH = 12;
 const MIN_CAPS_PROPORTION = 0.8;
+
+global.TEAMS = JSON.parse(fs.readFileSync('battle/teams.json'));
+global.Tours = {};
+global.Battles = {};
 
 settings = {};
 try {
@@ -32,24 +37,6 @@ notes = {};
 try {
 	notes = JSON.parse(fs.readFileSync('notes.json'));
 	if (!Object.keys(notes).length && notes !== {}) notes = {};
-} catch (e) {} // file doesn't exist [yet]
-
-reminders = {};
-try {
-	reminders = JSON.parse(fs.readFileSync('reminders.json'));
-	if (!Object.keys(reminders).length && reminders !== {}) reminders = {};
-} catch (e) {} // file doesn't exist [yet]
-
-scores = {};
-try {
-	scores = JSON.parse(fs.readFileSync('scores.json'));
-	if (!Object.keys(scores).length && scores !== {}) scores = {};
-} catch (e) {} // file doesn't exist [yet]
-
-trades = {};
-try {
-	trades = JSON.parse(fs.readFileSync('trades.json'));
-	if (!Object.keys(trades).length && trades !== {}) trades = {};
 } catch (e) {} // file doesn't exist [yet]
 
 bannedSites = {};
@@ -77,9 +64,6 @@ exports.parse = {
 	'friends': friends,
 	'messages': messages,
 	'notes': notes,
-	'reminders': reminders,
-	'scores': scores,
-	'trades': trades,
 	'bannedSites': bannedSites,
 	'bannedWords': bannedWords,
 	'userlog': userlog,
@@ -110,7 +94,7 @@ exports.parse = {
 			if (spl[2]) {
 			if (spl[2].substr(1, 10) === 'tournament') {
 				var splTour = spl[2].split('|');
-				if (/\"results\"/i.test(splTour[3])) this.say(connection, 'tha', 'Good job ' + splTour[3].substr(splTour[3].indexOf("results") + 12, splTour[3].indexOf("format") - splTour[3].indexOf("results") - 17) + ' on winning the tournament!^~^');
+				if (/\"results\"/i.test(splTour[3])) this.say(connection, room, 'Good job ' + splTour[3].substr(splTour[3].indexOf("results") + 12, splTour[3].indexOf("format") - splTour[3].indexOf("results") - 17) + ' on winning the tournament!^~^');
 			}
 			}
 		
@@ -126,16 +110,16 @@ exports.parse = {
 	},
 	message: function(message, connection, room) {
 		var spl = message.split('|');
+		Battle.receive(message, connection, room);
 		if (!spl[1]) {
-			if (/was promoted to Room Driver/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congratulations on becoming a Driver ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
-			if (/was promoted to Room Moderator/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congratulations on becoming a Moderator ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
-			if (/was promoted to Room Owner/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, '**(/*-*)/ ALL HAIL ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + ' (/*-*)/**');
-			if (/was promoted to Room Voice/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot') this.say(connection, room, 'Congrats on becoming Voice ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Driver/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot' && room !== 'groupchat-mashibot-mashisroom' && room !== 'groupchat-papew-relax') this.say(connection, room, 'Congratulations on becoming a Driver ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Moderator/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot' && room !== 'groupchat-mashibot-mashisroom' && room !== 'groupchat-papew-relax') this.say(connection, room, 'Congratulations on becoming a Moderator ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
+			if (/was promoted to Room Owner/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot' && room !== 'groupchat-mashibot-mashisroom' && room !== 'groupchat-papew-relax') this.say(connection, room, '**(/*-*)/ ALL HAIL ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + ' (/*-*)/**');
+			if (/was promoted to Room Voice/i.test(spl[0]) && toId(message.substring(0, message.indexOf("was"))) !== 'mashibot' && room !== 'groupchat-mashibot-mashisroom' && room !== 'groupchat-papew-relax') this.say(connection, room, 'Congrats on becoming Voice ' + spl[0].substr(0, spl[0].indexOf("was promoted to Room") - 1) + '!^-^');
 			spl = spl[0].split('>');
 			if (spl[1]) this.room = spl[1];
 			return;
 		}
-		
 		switch (spl[1]) {
 			case 'challstr':
 				info('received challstr, logging in...');
@@ -225,16 +209,20 @@ exports.parse = {
 
 				this.msgQueue.push('|/blockchallenges');
 				for (var i = 0, len = config.rooms.length; i < len; i++) {
-					var room = toId(config.rooms[i]);
+					var room = config.rooms[i];
 					if (room === 'lobby' && config.serverid === 'showdown') continue;
 					this.msgQueue.push('|/join ' + room);
 					this.msgQueue.push('|/avatar ' + config.avatarNumber);
+					if (this.settings && this.settings["challenges"] && this.settings["challenges"] == true) this.msgQueue.push('|/unblockchallenges');
+					if (this.settings && this.settings["challenges"] && this.settings["challenges"] == false) this.msgQueue.push('|/blockchallenges');
 				}
 				for (var i = 0, len = config.privaterooms.length; i < len; i++) {
-					var room = toId(config.privaterooms[i]);
+					var room = config.privaterooms[i];
 					if (room === 'lobby' && config.serverid === 'showdown') continue;
 					this.msgQueue.push('|/join ' + room);
 					this.msgQueue.push('|/avatar ' + config.avatarNumber);
+					if (this.settings && this.settings["challenges"] && this.settings["challenges"] == true) this.msgQueue.push('|/unblockchallenges');
+					if (this.settings && this.settings["challenges"] && this.settings["challenges"] == false) this.msgQueue.push('|/blockchallenges');
 				}
 				this.msgDequeue = setInterval(function () {
 					var msg = this.msgQueue.shift();
@@ -274,17 +262,20 @@ exports.parse = {
 				var by = spl[2];
 				if (toId(by) === toId(config.nick) && ' +%@&#~'.indexOf(by.charAt(0)) > -1) this.ranks[room] = by.charAt(0);
 
-// Blacklist User Autoban
+				// Blacklist User Autoban
 				if (this.userlog && this.userlog[toId(by)] && this.userlog[toId(by)]["bl"] === true) this.say(connection, room, '/rb ' + toId(by) + ', Blacklisted user ;-;');
 				
-// Friends comes online notification
+				// Auto-promote users in Groupchat 'Mashi's Room~' when they join
+				if (room == 'groupchat-mashibot-mashisroom' && this.userlog && this.userlog[toId(by)] && this.userlog[toId(by)]["rank"]) this.say(connection, 'groupchat-mashibot-mashisroom', '/room' + this.userlog[toId(by)]["rank"] + ' ' + toId(by));
+				
+/*				// Friends comes online notification
 				for (var i in this.friends) {
 					for (var j in this.friends[i]) {
 						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j].capitalize() + ' has joined your room!^-^__');
 					}
 				}
-				
-// Messages and Reminders
+*/				
+				// Sends any messages upon joining
 				if (this.sendMessages([toId(by)], this.room)) {
 					for (var msgNumber in this.messages[toId(by)]["mail"]) {
 						this.say(connection, this.room, '/w ' + by + ', ' + '[' + msgNumber + ']: ' + this.messages[toId(by)]["mail"][msgNumber]);
@@ -292,25 +283,27 @@ exports.parse = {
 					delete this.messages[toId(by)];
 					this.writeMessages();
 				}
-				if (this.sendReminders([toId(by)], this.room)) {
-					this.say(connection, this.room, '/w ' + by + ', ' + this.reminders[toId(by)]);
-					delete this.reminders[toId(by)];
-					this.writeReminders();
-				}
 				break;
 			case 'l': case 'L':
 				var by = spl[2];
 				this.room = '';
 				
-// Friends goes offline notification
+				// This code has been hidden!
+/*				
+				// Friends goes offline notification
 				for (var i in this.friends) {
 					for (var j in this.friends[i]) {
 						if (this.friends[i][j] == toId(by) && !this.friends[i]["status"]) this.say(connection, room, '/w ' + i + ', __' + this.friends[i][j].capitalize() + ' has left your room ;~;__');
 					}
-				}
+				} */
 				break;
 			case 'raw':
 				if (/[3-9] ?days/i.test(spl[2])) this.say(connection, room, 'zarel pls ;-;');
+				break;
+			case 'updatechallenges':
+				var challengeData = JSON.parse(spl[2]).challengesFrom;
+				var players = Object.keys(challengeData);
+				Battle.accept(connection, players[0], challengeData[players[0]]);
 				break;
 		}
 	},
@@ -382,12 +375,6 @@ exports.parse = {
 			return true;
 		}
 	},
-	sendReminders: function(user, room) {
-		if (!this.reminders || !this.reminders[user]) return false;
-		if (this.reminders[user]) {
-			return true;
-		}
-	},
 	uploadToHastebin: function(con, room, by, toUpload) {
 		var self = this;
 
@@ -399,7 +386,7 @@ exports.parse = {
 
 		var req = require('http').request(reqOpts, function(res) {
 			res.on('data', function(chunk) {
-				self.say(con, room, (room.charAt(0) === ',' ? "" : "/pm " + by + ", ") + "hastebin.com/raw/" + JSON.parse(chunk.toString())['key']);
+				self.say(con, room, "hastebin.com/raw/" + JSON.parse(chunk.toString())['key']);
 			});
 		});
 		req.write(toUpload);
@@ -444,31 +431,6 @@ exports.parse = {
 		
 		//Favorite Pokemon
 		else if (/what(\'s| is)? ?mash(i|y|iro)?(chan|bot)?\'?s? fav(e|ou?rite)? poke(mon)?\??/i.test(msg)) this.say(connection, room, '!data Ninetales');
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////// Reminder Regex ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		
-		
-		if (/mashi(bot)?,? (please)? ?tell/i.test(msg)) {
-			var user = msg.substr(msg.indexOf("tell") + 5, msg.indexOf("that") - 6 - msg.indexOf("tell"));
-			var message = msg.substr(msg.indexOf("that") + 5, msg.length);
-			var msgNew = toProperEnglish(message);
-			if (!this.reminders) this.reminders = {};
-			if (!this.reminders[toId(user)]) this.reminders[toId(user)] = {};
-			this.reminders[toId(user)] = by + ' says \"' + msgNew + '\"';
-			this.writeReminders();
-			this.say(connection, room, '/w ' + toId(by) + ', __Message has been sent successfully to ' + user + '!^-^__');
-		}
-		if (/mashi(bot)?,? (please)? ?remind/i.test(msg)) {
-			var user = msg.substr(msg.indexOf("remind") + 7, msg.indexOf("to") - 8 - msg.indexOf("remind"));
-			var message = msg.substr(msg.indexOf("to") + 3, msg.length);
-			var msgNew = toProperEnglish(message);
-			if (!this.reminders) this.reminders = {};
-			if (!this.reminders[toId(user)]) this.reminders[toId(user)] = {};
-			this.reminders[toId(user)] = by + ' reminds you to \"' + msgNew + '\"';
-			this.writeReminders();
-			this.say(connection, room, '/w ' + toId(by) + ', __Reminder has been sent successfully to ' + user + '!^-^__');
-		}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////// YouTube Links /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -821,67 +783,6 @@ exports.parse = {
 			});
 		};
 	})(),
-	writeScores: (function() {
-		var writing = false;
-		var writePending = false; // whether or not a new write is pending
-		var finishWriting = function() {
-			writing = false;
-			if (writePending) {
-				writePending = false;
-				this.writeScores();
-			}
-		};
-		return function() {
-			if (writing) {
-				writePending = true;
-				return;
-
-			}
-			writing = true;
-			var data = JSON.stringify(this.scores);
-			fs.writeFile('scores.json.0', data, function() {
-				// rename is atomic on POSIX, but will throw an error on Windows
-				fs.rename('scores.json.0', 'scores.json', function(err) {
-					if (err) {
-						// This should only happen on Windows.
-						fs.writeFile('scores.json', data, finishWriting);
-						return;
-					}
-					finishWriting();
-				});
-			});
-		};
-	})(),
-	writeReminders: (function() {
-		var writing = false;
-		var writePending = false; // whether or not a new write is pending
-		var finishWriting = function() {
-			writing = false;
-			if (writePending) {
-				writePending = false;
-				this.writeReminders();
-			}
-		};
-		return function() {
-			if (writing) {
-				writePending = true;
-				return;
-			}
-			writing = true;
-			var data = JSON.stringify(this.reminders);
-			fs.writeFile('reminders.json.0', data, function() {
-				// rename is atomic on POSIX, but will throw an error on Windows
-				fs.rename('reminders.json.0', 'reminders.json', function(err) {
-					if (err) {
-						// This should only happen on Windows.
-						fs.writeFile('reminders.json', data, finishWriting);
-						return;
-					}
-					finishWriting();
-				});
-			});
-		};
-	})(),
 	writeMessages: (function() {
 		var writing = false;
 		var writePending = false; // whether or not a new write is pending
@@ -906,37 +807,6 @@ exports.parse = {
 					if (err) {
 						// This should only happen on Windows.
 						fs.writeFile('messages.json', data, finishWriting);
-						return;
-					}
-					finishWriting();
-				});
-			});
-		};
-	})(),
-	writeTrades: (function() {
-		var writing = false;
-		var writePending = false; // whether or not a new write is pending
-		var finishWriting = function() {
-			writing = false;
-			if (writePending) {
-				writePending = false;
-				this.writeTrades();
-			}
-		};
-		return function() {
-			if (writing) {
-				writePending = true;
-				return;
-
-			}
-			writing = true;
-			var data = JSON.stringify(this.trades);
-			fs.writeFile('trades.json.0', data, function() {
-				// rename is atomic on POSIX, but will throw an error on Windows
-				fs.rename('trades.json.0', 'trades.json', function(err) {
-					if (err) {
-						// This should only happen on Windows.
-						fs.writeFile('trades.json', data, finishWriting);
 						return;
 					}
 					finishWriting();
