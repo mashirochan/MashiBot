@@ -1,7 +1,5 @@
 var http = require('http');
 var sys = require('sys');
-var osuapi = require('osu-api');
-var osu = new osuapi.Api('d71c2876656c6fcbd2e0456a7410272208360a5d');
 var request = require('request');
 
 var CDchecker = {
