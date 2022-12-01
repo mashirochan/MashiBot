@@ -17,7 +17,7 @@ request API: ```npm install request```
 Create an account for your bot on PS, pick a username, and register it with a password of your choice.
 
 ##### Download Files
-Download all of these files and put them somewhere on your computer in a folder, preferrable named after your bot.
+Download all of these files and put them somewhere on your computer in a folder, preferrably named after your bot.
 
 ##### Download Node.js
 To run your bot, you must first download a program called [node.js](https://nodejs.org/download/).
